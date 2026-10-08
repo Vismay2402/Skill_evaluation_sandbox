@@ -43,6 +43,15 @@ on:
         description: Send to human review even if the automated gate fails
         type: boolean
         default: false
+      test_cases:
+        description: "Your own test cases (optional): a repo path like test-cases/my-cases.csv, or paste JSON/CSV here. See test-cases/README.md"
+        required: false
+        default: ""
+      test_cases_mode:
+        description: "replace = only your test cases; append = the skill's evals.json plus yours"
+        type: choice
+        options: [replace, append]
+        default: replace
       executor:
         description: "mock = dry run of the whole flow with no model calls"
         type: choice
@@ -64,6 +73,7 @@ env:
   HEAD_REF: ${{ github.head_ref }}
   SKILLS_INPUT: ${{ inputs.skills }}
   MODELS_INPUT: ${{ inputs.models }}
+  TEST_CASES_INPUT: ${{ inputs.test_cases }}
   BASE_REF: ${{ github.event_name == 'pull_request' && format('origin/{0}', github.base_ref) || format('origin/{0}', github.event.repository.default_branch || 'main') }}
 
 jobs:
@@ -138,6 +148,26 @@ jobs:
           echo "names=$(echo $NAMES)" >> "$GITHUB_OUTPUT"
           echo "Skills selected: $(echo $NAMES)"
 
+      - name: Prepare your test cases (if given)
+        id: cases
+        if: github.event_name == 'workflow_dispatch' && inputs.test_cases != ''
+        run: |
+          # Accepts a path inside the repo, or JSON / CSV pasted into the Run workflow form.
+          P=$(printf '%s' "$TEST_CASES_INPUT" | head -c 300 | tr -d '\r')
+          if [ -f "$P" ] && realpath --relative-base="$PWD" "$P" | grep -qv '^/'; then
+            FILE="$P"
+          else
+            mkdir -p .skilleval-input
+            if printf '%s' "$TEST_CASES_INPUT" | sed 's/^[[:space:]]*//' | head -c1 | grep -q '[[{]'; then
+              FILE=.skilleval-input/test-cases.json
+            else
+              FILE=.skilleval-input/test-cases.csv
+            fi
+            printf '%s\n' "$TEST_CASES_INPUT" > "$FILE"
+          fi
+          echo "file=$FILE" >> "$GITHUB_OUTPUT"
+          echo "Using your test cases from $FILE (${{ inputs.test_cases_mode }})"
+
       - name: Draft evals for skills that have none
         if: github.event_name == 'pull_request'
         run: |
@@ -165,7 +195,10 @@ jobs:
           GH_TOKEN: ${{ github.token }}
 
       - name: Validate skills and eval sets
-        run: python -m skilleval validate ${{ steps.select.outputs.args }}
+        run: |
+          CASES=""
+          [ -n "${{ steps.cases.outputs.file }}" ] && CASES="--test-cases ${{ steps.cases.outputs.file }} --test-cases-mode ${{ inputs.test_cases_mode }}"
+          python -m skilleval validate ${{ steps.select.outputs.args }} $CASES
 
       - name: Run evaluation
         id: run
@@ -175,6 +208,7 @@ jobs:
             OPTS="$OPTS --runs ${{ inputs.runs_per_config }} --baseline ${{ inputs.baseline }} --executor ${{ inputs.executor }}"
             [ -n "$MODELS_INPUT" ] && OPTS="$OPTS --models $(echo "$MODELS_INPUT" | tr -cd 'a-z0-9.,-')"
             [ "${{ inputs.trigger_evals }}" = "false" ] && OPTS="$OPTS --no-trigger"
+            [ -n "${{ steps.cases.outputs.file }}" ] && OPTS="$OPTS --test-cases ${{ steps.cases.outputs.file }} --test-cases-mode ${{ inputs.test_cases_mode }}"
           fi
           # The usefulness review always compares against no skill at all.
           [ "${{ github.event_name }}" = "schedule" ] && OPTS="$OPTS --baseline without_skill"

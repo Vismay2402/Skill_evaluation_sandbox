@@ -1,0 +1,14 @@
+[
+  {"query": "write a commit message for these staged changes, I renamed the user service and fixed a null check", "should_trigger": true},
+  {"query": "is 'Updated stuff' an ok commit message? rewrite it properly for this diff", "should_trigger": true},
+  {"query": "give me a conventional commit for adding retry logic to the payments client", "should_trigger": true},
+  {"query": "commit msg for bumping react to 19 and fixing the broken tests", "should_trigger": true},
+  {"query": "reword my last commit message so it follows our commit conventions", "should_trigger": true},
+  {"query": "what should the commit say? I removed the deprecated /v1/login endpoint", "should_trigger": true},
+  {"query": "write release notes for version 2.3 from these commits", "should_trigger": false},
+  {"query": "write a PR description for the dark mode change", "should_trigger": false},
+  {"query": "how do I squash my last 3 commits?", "should_trigger": false},
+  {"query": "update CHANGELOG.md for the 2.3 release", "should_trigger": false},
+  {"query": "explain git rebase vs merge", "should_trigger": false},
+  {"query": "set up commitlint in our CI pipeline", "should_trigger": false}
+]

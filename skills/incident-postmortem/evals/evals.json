@@ -1,0 +1,47 @@
+{
+  "skill_name": "incident-postmortem",
+  "evals": [
+    {
+      "id": 1,
+      "name": "checkout-outage-postmortem",
+      "type": "standard",
+      "description": "Postmortem from an incident chat export",
+      "prompt": "the checkout incident from this afternoon is over. here's the slack export (inputs/incident-chat.txt). can you write up the postmortem so I can circulate it tomorrow?",
+      "expected_output": "postmortem.md in house format: SEV2, 33 min, UTC timeline, blameless root cause, OPS action items",
+      "files": ["evals/files/incident-chat.txt"],
+      "expectations": [
+        {"text": "postmortem.md follows the house template: sections in order, timeline and action-item tables, OPS ticket placeholders, draft status line", "script": "evals/checks/postmortem_format.py", "category": "asset"},
+        {"text": "Severity is SEV2 (customer-facing outage of roughly 30-35 minutes with over 5% errors) and the rule that applied is stated", "category": "org_knowledge"},
+        {"text": "Timeline times are converted from IST to UTC (e.g. the 14:02 alert appears as 08:32 UTC)", "category": "org_knowledge"},
+        {"text": "Root cause, contributing factors and action items do not name Priya or Marco (roles only)", "category": "org_knowledge"},
+        {"text": "Contributing factors include the missing helm values validation in CI and the skipped canary", "category": "quality"}
+      ]
+    },
+    {
+      "id": 2,
+      "name": "thin-notes-no-guessing",
+      "type": "edge",
+      "description": "Sparse notes - must not invent a cause",
+      "prompt": "need a postmortem for yesterday's search outage. all I have: alert fired 09:10 UTC, search returned errors, someone restarted the cluster at 09:50 UTC and it recovered. no idea why it broke yet.",
+      "expected_output": "postmortem.md with TBD root cause and questions, SEV2 from 40 minutes",
+      "expectations": [
+        {"text": "Root cause is marked TBD with a question to answer, not a guessed cause", "category": "behavior"},
+        {"text": "Severity is SEV2 based on a 40 minute customer-facing outage", "category": "org_knowledge"},
+        {"text": "Impact states a duration of 40 minutes", "category": "quality"},
+        {"text": "Action items use OPS-TBD ticket placeholders and owner roles, not names", "category": "org_knowledge"}
+      ]
+    },
+    {
+      "id": 3,
+      "name": "live-status-update",
+      "type": "should_not_trigger",
+      "description": "Live status-page update (should not trigger)",
+      "prompt": "checkout is erroring right now for some customers, we're still investigating. write me a short status page update to post in the next 5 minutes.",
+      "expected_output": "A short customer-facing status update, no postmortem",
+      "expectations": [
+        {"text": "The reply is a short customer-facing status update (under about 80 words)", "category": "behavior"},
+        {"text": "No postmortem.md, root-cause analysis or internal timeline is produced", "category": "behavior"}
+      ]
+    }
+  ]
+}

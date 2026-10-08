@@ -1,0 +1,14 @@
+[
+  {"query": "write the postmortem for last night's payments outage, notes are in the doc I pasted below", "should_trigger": true},
+  {"query": "can you turn this incident channel export into an RCA for the ops review?", "should_trigger": true},
+  {"query": "we had a 20 min login outage on friday - need the incident write-up for the CTO", "should_trigger": true},
+  {"query": "draft an incident review: deploy broke the API at 10:05 UTC, rolled back 10:40", "should_trigger": true},
+  {"query": "post-incident report for the database failover from tuesday please, blameless format", "should_trigger": true},
+  {"query": "summarise what went wrong in the checkout incident and list follow-up actions as a postmortem", "should_trigger": true},
+  {"query": "write a status page update, the API is down right now", "should_trigger": false},
+  {"query": "email our biggest customer apologising for yesterday's outage", "should_trigger": false},
+  {"query": "what's the difference between SEV1 and SEV2 at most companies?", "should_trigger": false},
+  {"query": "set up a pagerduty escalation policy for the checkout team", "should_trigger": false},
+  {"query": "write a runbook for restarting the search cluster", "should_trigger": false},
+  {"query": "help me debug why checkout-api is returning 500s right now", "should_trigger": false}
+]

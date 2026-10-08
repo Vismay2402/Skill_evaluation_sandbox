@@ -2,3 +2,4 @@ skilleval-workspace/
 __pycache__/
 .pytest_cache/
 *.pyc
+.skilleval-input/

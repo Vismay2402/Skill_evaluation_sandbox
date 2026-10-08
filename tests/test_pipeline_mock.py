@@ -26,7 +26,8 @@ def test_run_produces_skill_creator_artifacts(tmp_path):
     assert r.returncode == 0, r.stderr
     out = ws / "csv-data-profiler"
     for f in ("benchmark.json", "benchmark.md", "gate.json", "summary.md", "review.html", "run.json",
-              "report.pdf", "verdict.json", "matrix.json", "analyst.json"):
+              "report.pdf", "verdict.json", "matrix.json", "analyst.json", "comparison.json", "usage.json",
+              "steps.json", "test_cases.json"):
         assert (out / f).exists(), f
     bench = json.loads((out / "benchmark.json").read_text())
     assert set(bench["run_summary"]) >= {"with_skill", "without_skill", "delta"}
@@ -39,6 +40,29 @@ def test_run_produces_skill_creator_artifacts(tmp_path):
             assert {"text", "passed", "evidence"} <= set(e)
     status = json.loads((ws / "status.json").read_text())
     assert status["evaluated"] == ["csv-data-profiler"]
+    usage = json.loads((out / "usage.json").read_text())
+    assert usage["total"]["total"] > 0 and usage["by_stage"]["Grading (grader agent)"]["calls"] == 3 * 2 * 2 * 2
+    comp = json.loads((out / "comparison.json").read_text())
+    assert all(v["interpretation"] in {"KEEP", "REFINE", "REMOVE OR REWRITE"} for v in comp["by_model"].values())
+    summary = (out / "summary.md").read_text()
+    for heading in ("Skill under test", "Skills 2.0", "Token usage", "A/B benchmark", "Test cases used",
+                    "Trigger optimization", "Specific failures"):
+        assert heading in summary, heading
+
+
+def test_custom_test_cases(tmp_path):
+    cases = tmp_path / "mine.csv"
+    cases.write_text('prompt,type,expectations,files\n'
+                     '"profile inputs/orders.csv",standard,"[quality] profile.md exists | reports 8 rows",'
+                     'skills/csv-data-profiler/evals/files/orders.csv\n')
+    assert sk("validate", "--skill", "csv-data-profiler", "--test-cases", str(cases)).returncode == 0
+    ws = tmp_path / "ws"
+    r = sk("run", "--skill", "csv-data-profiler", "--executor", "mock", "--workspace", str(ws),
+           "--test-cases", str(cases), "--test-cases-mode", "append", "--allow-failed-gate", "--no-trigger")
+    assert r.returncode == 0, r.stderr
+    used = json.loads((ws / "csv-data-profiler" / "test_cases.json").read_text())
+    assert len(used) == 4 and used[-1]["source"].startswith("custom:")
+    assert used[-1]["eval_id"] == 4  # renumbered after the skill's own cases
 
 
 def test_verdict_rules():

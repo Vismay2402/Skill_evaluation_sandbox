@@ -1,0 +1,14 @@
+[
+  {"query": "review this dbt model before I merge, it builds the customer_ltv table", "should_trigger": true},
+  {"query": "is this snowflake migration script safe to run? pasted below", "should_trigger": true},
+  {"query": "can you check my view definition against our sql standards", "should_trigger": true},
+  {"query": "approve or reject this query for the analytics schema: select * from orders join customers using (customer_id)", "should_trigger": true},
+  {"query": "sanity check this delete statement before I run it in prod", "should_trigger": true},
+  {"query": "code review for the attached .sql file please", "should_trigger": true},
+  {"query": "write a query that returns monthly revenue by region", "should_trigger": false},
+  {"query": "explain what QUALIFY does in snowflake", "should_trigger": false},
+  {"query": "why is my snowflake query slow? here's the query profile", "should_trigger": false},
+  {"query": "convert this postgres query to snowflake syntax", "should_trigger": false},
+  {"query": "create a snowflake warehouse sized for 20 analysts", "should_trigger": false},
+  {"query": "generate dbt tests for the orders model", "should_trigger": false}
+]

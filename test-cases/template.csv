@@ -1,0 +1,3 @@
+skill,id,name,type,description,prompt,expected_output,expectations,files
+csv-data-profiler,101,tsv-first-look,standard,TSV export from the warehouse,"I exported shipments from Snowflake as a tab separated file (inputs/orders.csv). Give me a first look before I build a dashboard on it.",profile.md with overview and issues,"[quality] profile.md is written to outputs | Reports the row count of the file | [org_knowledge] Flags order_id values that appear more than once",evals/files/orders.csv
+csv-data-profiler,102,no-file-given,ambiguous,User forgets to attach the file,"profile my customer file please",Asks which file to profile instead of inventing data,"[behavior] Asks the user for the file or its path | Does not fabricate column statistics",

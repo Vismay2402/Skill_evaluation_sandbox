@@ -15,6 +15,7 @@ from pathlib import Path
 
 from .config import VENDOR_DIR
 from .evals import AUTO_NOT_TRIGGERED, EvalCase
+from .usage import claude_json
 
 GRADER_MD = (VENDOR_DIR / "agents" / "grader.md").read_text()
 
@@ -40,26 +41,22 @@ def _llm_grade(texts: list[str], run_dir: Path, model: str, timeout: int) -> dic
         "user_notes_summary; eval_feedback). Grade every expectation, in the same order, "
         "with the exact expectation text."
     )
-    env = {k: v for k, v in os.environ.items() if k != "CLAUDECODE"}
     gfile = run_dir / "grading.json"
     gfile.unlink(missing_ok=True)
-    proc = subprocess.run(["claude", "-p", prompt, "--model", model, "--output-format", "text",
-                           "--dangerously-skip-permissions", "--setting-sources", "project"],
-                          cwd=run_dir, env=env, capture_output=True, text=True, timeout=timeout,
-                          stdin=subprocess.DEVNULL)
+    text, stderr, _ = claude_json(prompt, model, run_dir, timeout, usage_file=run_dir / "grader_usage.json")
     if gfile.exists():
         try:
             return json.loads(gfile.read_text())
         except json.JSONDecodeError:
             pass
-    m = re.search(r"\{[\s\S]*\}", proc.stdout or "")
+    m = re.search(r"\{[\s\S]*\}", text or "")
     if m:
         try:
             return json.loads(m.group(0))
         except json.JSONDecodeError:
             pass
     return {"expectations": [{"text": t, "passed": False, "evidence": "grader produced no parseable result"}
-                             for t in texts], "grader_error": (proc.stderr or "")[-2000:]}
+                             for t in texts], "grader_error": (stderr or "")[-2000:]}
 
 
 def _mock_grade(texts: list[str], run_dir: Path, config: str) -> dict:
@@ -80,6 +77,9 @@ def grade_run(case: EvalCase, run_dir: Path, config: str, skill_root: Path, exec
         grading = {"expectations": []}
     elif executor == "mock":
         grading = _mock_grade(text_exps, run_dir, config)
+        (run_dir / "grader_usage.json").write_text(json.dumps(
+            {"input": 900, "output": 250, "cache_read": 3000, "cache_write": 0, "total": 4150,
+             "cost_usd": 0.0, "calls": 1}))
     else:
         grading = _llm_grade(text_exps, run_dir, grader_model, timeout)
 

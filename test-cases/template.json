@@ -1,0 +1,19 @@
+{
+  "skill_name": "csv-data-profiler",
+  "evals": [
+    {
+      "id": 201,
+      "name": "null-heavy-columns",
+      "type": "edge",
+      "description": "Which columns are mostly empty",
+      "prompt": "Our CRM export is in inputs/orders.csv. Which columns are mostly empty, and is any column useless?",
+      "expected_output": "profile.md listing null % per column and calling out any column over 20% null",
+      "files": ["evals/files/orders.csv"],
+      "expectations": [
+        {"text": "profile.md reports a null % for every column", "category": "quality"},
+        {"text": "Columns over 20% null are listed under Issues", "category": "org_knowledge"},
+        "The answer does not invent columns that are not in the file"
+      ]
+    }
+  ]
+}

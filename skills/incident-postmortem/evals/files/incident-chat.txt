@@ -1,0 +1,11 @@
+#inc-checkout-errors  (export, times are IST)
+
+[14:02] PagerDuty: ALERT checkout-api 5xx rate 12% (threshold 2%)
+[14:04] Priya Nair: ack, looking. dashboards show errors started ~13:58
+[14:09] Priya Nair: looks like the 13:55 deploy of checkout-api v4.18 - new DB pool config
+[14:11] Priya Nair: paging release manager
+[14:15] Marco Rossi (release mgr): confirmed v4.18 set max_pool_size=5 instead of 50, typo in helm values
+[14:18] Marco Rossi: rolling back to v4.17
+[14:31] Priya Nair: rollback done, 5xx back under 1%
+[14:40] Priya Nair: all clear, closing incident. ~30% of checkout requests failed during the window
+[14:42] Marco Rossi: helm values aren't validated in CI, and canary was skipped because of the release freeze override

@@ -1,0 +1,3 @@
+use database PROD_SALES;
+delete from PROD_SALES.CORE.ORDERS_STAGING;
+truncate table PROD_SALES.CORE.ORDER_EVENTS;

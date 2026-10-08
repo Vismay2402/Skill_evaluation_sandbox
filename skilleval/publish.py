@@ -24,6 +24,7 @@ def publish(run_out: Path, results_dir: Path, registry_file: Path, approver: str
 
     for f in ("run.json", "benchmark.json", "benchmark.md", "gate.json", "summary.md", "review.html",
               "trigger_results.json", "report.pdf", "verdict.json", "matrix.json", "analyst.json",
+              "comparison.json", "usage.json", "steps.json", "test_cases.json",
               *[p.name for p in run_out.glob("benchmark-*.json")]):
         if (run_out / f).exists():
             shutil.copy2(run_out / f, dest / f)

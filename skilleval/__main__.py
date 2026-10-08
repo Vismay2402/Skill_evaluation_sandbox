@@ -6,6 +6,8 @@
   python -m skilleval draft-evals --skill NAME      let Claude draft evals.json + trigger_evals.json
   python -m skilleval run --skill NAME [--skill N2] | --changed BASE | --all
   python -m skilleval publish --workspace DIR --approver USER [--commit]
+  python -m skilleval run --skill NAME --test-cases my-cases.csv [--test-cases-mode append]
+  python -m skilleval import-cases --skill NAME --file my-cases.json   save them into evals/evals.json
   python -m skilleval verify --changed BASE         merge check: approved result matches current skill
   python -m skilleval changes --workspace DIR       skills whose usefulness verdict changed
 """
@@ -56,8 +58,10 @@ def cmd_changed(args, cfg):
 def cmd_validate(args, cfg):
     skills_dir, _, _ = _paths(cfg)
     bad = 0
+    custom = Path(args.test_cases).resolve() if getattr(args, "test_cases", None) else None
     for s in _targets(args, skills_dir):
-        problems = ev.validate(skills_dir / s)
+        use = custom if custom and ev.read_test_case_file(custom, s) is not None else None
+        problems = ev.validate(skills_dir / s, use, getattr(args, "test_cases_mode", "replace"))
         print(f"{'OK  ' if not problems else 'FAIL'} {s}")
         for p in problems:
             print(f"     - {p}")
@@ -114,6 +118,8 @@ def cmd_run(args, cfg_unused):
         "baseline": args.baseline, "max_parallel": args.parallel}.items() if v is not None}}
     if args.no_trigger:
         overrides["trigger_eval"] = {"enabled": False}
+    if args.no_compare:
+        overrides["comparison"] = {"enabled": False}
     base_cfg = load_config(overrides=overrides)
     skills_dir, results_dir, _ = _paths(base_cfg)
     targets = _targets(args, skills_dir)
@@ -124,13 +130,22 @@ def cmd_run(args, cfg_unused):
     workspace = Path(args.workspace).resolve()
     workspace.mkdir(parents=True, exist_ok=True)
     results, failed = [], []
+    custom = Path(args.test_cases).resolve() if args.test_cases else None
+    if custom and not custom.exists():
+        print(f"[skilleval] test-case file not found: {args.test_cases}", file=sys.stderr)
+        sys.exit(2)
     with tempfile.TemporaryDirectory() as snap:
         for s in targets:
             cfg = load_config(skills_dir / s, overrides=overrides)
             old = snapshot_from_ref(skills_dir, s, args.base_ref, Path(snap)) if args.base_ref else None
+            use_custom = custom
+            if custom and ev.read_test_case_file(custom, s) is None:
+                use_custom = None  # the file has no cases for this skill: use the skill's own evals.json
+                print(f"[skilleval] {s}: {custom.name} has no test cases for this skill; using evals/evals.json",
+                      file=sys.stderr)
             try:
                 m = evaluate_skill(skills_dir / s, workspace, cfg, old_snapshot=old, results_dir=results_dir,
-                                   eval_ids=args.evals)
+                                   eval_ids=args.evals, custom_cases=use_custom, custom_mode=args.test_cases_mode)
                 results.append(m)
                 if m["gate_status"] != "pass":
                     failed.append(s)
@@ -150,6 +165,36 @@ def cmd_run(args, cfg_unused):
                                                         "failed_gate": failed}, indent=2))
     print((workspace / "SUMMARY.md").read_text())
     sys.exit(1 if failed and not args.allow_failed_gate else 0)
+
+
+def cmd_import_cases(args, cfg):
+    """Make user-supplied test cases permanent: write them into the skill's evals/evals.json."""
+    skills_dir, _, _ = _paths(cfg)
+    sd = skills_dir / args.skill
+    cases = ev.load_evals(sd, Path(args.file).resolve(), args.mode)
+    out = []
+    for c in cases:
+        exps = []
+        for e in c.expectations:
+            if e.script == ev.AUTO_NOT_TRIGGERED:
+                continue
+            exps.append({"text": e.text, **({"script": e.script} if e.script else {}),
+                         **({"category": e.category} if e.category else {})} if (e.script or e.category) else e.text)
+        files = []
+        for f in c.files:
+            p = Path(f)
+            if p.is_absolute():  # copy custom input files into the skill's evals/files/
+                dest = sd / "evals" / "files" / p.name
+                dest.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(p, dest)
+                f = str(dest.relative_to(sd))
+            files.append(f)
+        out.append({"id": c.id, "name": c.name, "type": c.type, "description": c.description,
+                    "prompt": c.prompt, "expected_output": c.expected_output, "files": files, "expectations": exps})
+    name, _ = ev.skill_identity(sd)
+    (sd / "evals").mkdir(exist_ok=True)
+    (sd / "evals" / "evals.json").write_text(json.dumps({"skill_name": name, "evals": out}, indent=2) + "\n")
+    print(f"{args.skill}: wrote {len(out)} test cases to {(sd / 'evals' / 'evals.json').relative_to(REPO_ROOT)}")
 
 
 def cmd_publish(args, cfg):
@@ -239,6 +284,15 @@ def main():
     r.add_argument("--evals", type=int, nargs="*", help="only these eval ids")
     r.add_argument("--allow-failed-gate", action="store_true")
     r.add_argument("--no-trigger", action="store_true", help="skip description-trigger evals")
+    r.add_argument("--no-compare", action="store_true", help="skip the blind A/B comparison")
+    for sp in (r, sub.choices["validate"]):
+        sp.add_argument("--test-cases", metavar="FILE",
+                        help="your own test cases (JSON in skill-creator schema, or CSV - see templates/)")
+        sp.add_argument("--test-cases-mode", choices=["replace", "append"], default="replace",
+                        help="replace the skill's evals.json for this run, or add to it")
+    im = sub.add_parser("import-cases", help="save a test-case file into a skill's evals/evals.json")
+    im.add_argument("--skill", required=True); im.add_argument("--file", required=True)
+    im.add_argument("--mode", choices=["replace", "append"], default="append")
     ch = sub.add_parser("changes", help="verdict changes / retire candidates in a workspace")
     ch.add_argument("--workspace", default="skilleval-workspace"); ch.add_argument("--output")
     pb = sub.add_parser("publish")
@@ -249,7 +303,7 @@ def main():
     args = p.parse_args()
     cfg = load_config(config_path=Path(args.config) if args.config else None)
     {"list": cmd_list, "changed": cmd_changed, "validate": cmd_validate, "draft-evals": cmd_draft_evals,
-     "run": cmd_run, "publish": cmd_publish, "verify": cmd_verify,
+     "run": cmd_run, "publish": cmd_publish, "import-cases": cmd_import_cases, "verify": cmd_verify,
      "changes": cmd_changes}[args.cmd](args, cfg)
 
 

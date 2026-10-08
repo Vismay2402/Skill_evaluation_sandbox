@@ -1,0 +1,3 @@
+# Per-skill overrides of skilleval.config.yaml
+targets:
+  skill_kind: critical   # guards production data: Skills 2.0 target 90%

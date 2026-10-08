@@ -1,0 +1,15 @@
+diff --git a/api/routes/orders.py b/api/routes/orders.py
+@@ -12,9 +12,11 @@ router = APIRouter()
+-@router.get("/orders/{order_id}")
+-def get_order(order_id: int):
+-    return repo.get(order_id)
++@router.get("/v2/orders/{order_id}")
++def get_order(order_id: str):
++    """Order ids are now UUID strings."""
++    order = repo.get(order_id)
++    return OrderOut.from_model(order)
+diff --git a/api/schemas.py b/api/schemas.py
++class OrderOut(BaseModel):
++    id: str
++    total_cents: int
++    currency: str

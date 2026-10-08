@@ -27,6 +27,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from .evals import EvalCase
+from .usage import from_result_event
 
 HARNESS_NOTE = (
     "\n\n---\nEvaluation harness note: any input files are in ./inputs/. "
@@ -165,10 +166,8 @@ def run_claude_code(spec: RunSpec) -> dict:
     shutil.copytree(work / "outputs", out_dir)
     (out_dir / "final_response.md").write_text(final_text or "(no final response)")
 
-    usage = result_evt.get("usage", {}) or {}
-    total_tokens = sum(int(usage.get(k, 0) or 0) for k in
-                       ("input_tokens", "output_tokens", "cache_creation_input_tokens",
-                        "cache_read_input_tokens"))
+    usage = from_result_event(result_evt)
+    total_tokens = usage["total"]
     files_created = sorted(str(p.relative_to(out_dir)) for p in out_dir.rglob("*")
                            if p.is_file() and p.name != "final_response.md")
     harness_error = timed_out or rc != 0 or is_error or not result_evt
@@ -198,6 +197,7 @@ def run_claude_code(spec: RunSpec) -> dict:
         "total_duration_seconds": round(duration_ms / 1000, 1),
         "cost_usd": result_evt.get("total_cost_usd"),
         "executor_model": spec.model,
+        "usage": usage,
     })
     shutil.rmtree(work, ignore_errors=True)
     return metrics
@@ -223,9 +223,12 @@ def run_mock(spec: RunSpec) -> dict:
                "output_chars": len(text), "transcript_chars": len(text) * 2,
                "skill_triggered": (spec.case.type != "should_not_trigger") if has_skill else None}
     _write_json(out / "metrics.json", metrics)
+    inp, outp = tokens // 10, tokens // 8
+    usage = {"input": inp, "output": outp, "cache_read": tokens - inp - outp - 400, "cache_write": 400,
+             "total": tokens, "cost_usd": 0.0, "calls": 1}
     _write_json(spec.run_dir / "timing.json", {"total_tokens": tokens, "duration_ms": secs * 1000,
                                                 "total_duration_seconds": float(secs), "cost_usd": 0.0,
-                                                "executor_model": "mock"})
+                                                "executor_model": "mock", "usage": usage})
     return metrics
 
 

@@ -1,0 +1,45 @@
+{
+  "skill_name": "conventional-commits",
+  "evals": [
+    {
+      "id": 1,
+      "name": "breaking-api-change",
+      "type": "standard",
+      "description": "Breaking API change from a diff",
+      "prompt": "I'm on branch PAY-482-uuid-orders. write the commit message for the diff in inputs/change.diff",
+      "expected_output": "feat(api)!: ... with BREAKING CHANGE footer and Refs: PAY-482",
+      "files": ["evals/files/change.diff"],
+      "expectations": [
+        {"text": "commit.txt has a valid Conventional Commits header of 72 characters or fewer followed by a blank line", "script": "evals/checks/commit_format.py", "category": "quality"},
+        {"text": "The header marks the change as breaking with '!' and uses scope api", "category": "quality"},
+        {"text": "A BREAKING CHANGE footer explains the /v2 path and string (UUID) order ids and how to migrate", "category": "quality"},
+        {"text": "The message ends with the footer 'Refs: PAY-482'", "category": "org_knowledge"}
+      ]
+    },
+    {
+      "id": 2,
+      "name": "simple-fix-description",
+      "type": "standard",
+      "description": "Bug fix described in words",
+      "prompt": "commit msg pls: fixed the web app's date picker showing yesterday for users east of UTC, it was using local midnight instead of UTC midnight",
+      "expected_output": "fix(web): use UTC midnight in date picker",
+      "expectations": [
+        {"text": "commit.txt has a valid Conventional Commits header of 72 characters or fewer followed by a blank line", "script": "evals/checks/commit_format.py", "category": "quality"},
+        {"text": "Type is fix with scope web", "category": "quality"},
+        {"text": "The subject is in the imperative mood (e.g. 'use', not 'used' or 'fixed')", "category": "quality"}
+      ]
+    },
+    {
+      "id": 3,
+      "name": "pr-description",
+      "type": "should_not_trigger",
+      "description": "PR description (should not trigger)",
+      "prompt": "write a pull request description for adding dark mode to the settings page: what changed, screenshots section, testing notes",
+      "expected_output": "A PR description with sections, not a commit message",
+      "expectations": [
+        {"text": "The reply is a PR description with What changed, Screenshots and Testing sections", "category": "behavior"},
+        {"text": "No commit.txt or Conventional Commits header is produced", "category": "behavior"}
+      ]
+    }
+  ]
+}

@@ -123,6 +123,32 @@ def render_pdf(path: Path, ctx: dict) -> None:
         f"Skill version {ctx['version'][:8]} &middot; {ctx['date']}"
         + (" &middot; <font color='#CF222E'><b>MOCK DATA - dry run, no model calls</b></font>"
            if ctx["executor"] == "mock" else ""), SUB))
+    story.append(Paragraph(
+        "<b>Evaluated with Skills 2.0</b> - Anthropic skill-creator's eval and benchmark tooling: evals.json test "
+        "cases, parallel isolated runs, grader agent, blind comparator agent (A/B), analyzer agent, "
+        "aggregate_benchmark, run_eval trigger tests and the eval viewer. The step-by-step record is on page 2.",
+        ParagraphStyle("badge", parent=BODY, backColor=colors.HexColor("#EEF2FF"), borderPadding=5,
+                       textColor=colors.HexColor("#312E81"), spaceAfter=8)))
+    pr = ctx.get("profile")
+    if pr:
+        yes = lambda b: f'<font color="{(PASS if b else FAIL).hexval()}"><b>{"yes" if b else "no"}</b></font>'
+        rows = [[_p("Skill under test", CELL_H), Paragraph(f"<b>{escape(pr['name'])}</b>", CELL)],
+                [_p("Description", CELL_H), Paragraph(escape(pr["description"]), CELL)],
+                [_p("Description check", CELL_H), Paragraph(
+                    f"{pr['description_chars']}/{pr['description_limit']} characters &middot; says when to use: "
+                    f"{yes(pr['says_when_to_use'])} &middot; says when not to use: {yes(pr['says_when_not_to_use'])}"
+                    + (f" &middot; review: <b>{escape((an.get('description_review') or {}).get('assessment', ''))}</b>"
+                       if an.get("description_review") else ""), CELL)],
+                [_p("Size", CELL_H), _p(f"SKILL.md {pr['skill_md_lines']} lines (~{pr['skill_md_tokens_est']:,} tokens "
+                                        f"loaded when triggered); bundled files: "
+                                        f"{', '.join(pr['bundled_files']) or 'none'}")],
+                [_p("Test cases", CELL_H), _p(f"{len(mx['cases'])} cases from "
+                                              f"{', '.join(sorted({c.get('source', 'evals/evals.json') for c in ctx.get('cases', [])})) or 'evals/evals.json'}")]]
+        t = Table(rows, colWidths=[38 * mm, W - 38 * mm])
+        t.setStyle(TableStyle([("VALIGN", (0, 0), (-1, -1), "TOP"), ("BOX", (0, 0), (-1, -1), 0.6, RULE),
+                               ("LINEBELOW", (0, 0), (-1, -2), 0.3, RULE), ("BACKGROUND", (0, 0), (0, -1), HEAD_BG),
+                               ("TOPPADDING", (0, 0), (-1, -1), 3), ("BOTTOMPADDING", (0, 0), (-1, -1), 3)]))
+        story += [t, Spacer(1, 8)]
 
     # ---- Verdict -------------------------------------------------------------------------------
     v = dec["overall"]
@@ -147,11 +173,43 @@ def render_pdf(path: Path, ctx: dict) -> None:
                          Paragraph(f'<font color="{VERDICT_COLORS[p["verdict"]]}"><b>{p["verdict"]}</b></font>',
                                    CELL)])
         story.append(_table(rows, [30*mm, 20*mm, 22*mm, 18*mm, 52*mm, 34*mm, 26*mm, 22*mm, W - 224*mm]))
+    comp = ctx.get("comparison")
+    if comp:
+        story.append(Paragraph("A/B benchmark: blind comparison", H2))
+        story.append(Paragraph(
+            f"For each case and run, {escape(model_label(comp['judge_model']))} saw the with-skill and the "
+            f"{escape(baseline.replace('_', ' '))} output as A and B in random order (skill-creator's blind "
+            "comparator) and picked the better one. Win rate counts ties as half. Skills 2.0 reading: "
+            "70% or more keep, 50-70% refine or question it, under 50% remove or rewrite.", BODY))
+        rows = [["Model", "Comparisons", "Skill wins", "Ties", "Baseline wins", "Win rate", "Reading"]]
+        for m, v in comp["by_model"].items():
+            col = {"KEEP": PASS, "REFINE": colors.HexColor("#9A6700")}.get(v["interpretation"], FAIL)
+            rows.append([mlabels.get(m, m), str(v["comparisons"]), str(v["skill_wins"]), str(v["ties"]),
+                         str(v["baseline_wins"]), "-" if v["win_rate"] is None else f"{v['win_rate']:.0%}",
+                         Paragraph(f'<font color="{col.hexval()}"><b>{v["interpretation"]}</b></font>', CELL)])
+        story.append(_table(rows, [40*mm, 28*mm, 28*mm, 20*mm, 30*mm, 26*mm, W - 172*mm]))
     outlook = dec.get("outlook", []) + dec.get("trend_alerts", [])
     if outlook:
         story += [Paragraph("Outlook as models evolve", H2)] + _bullets(outlook)
 
+    # ---- Skills 2.0 steps -----------------------------------------------------------------------
+    if ctx.get("steps"):
+        story.append(PageBreak())
+        story.append(Paragraph("Skills 2.0 evaluation steps, as run", H2))
+        story.append(Paragraph("The Build, Eval, A/B benchmark and trigger-optimization workflow from the Skills 2.0 "
+                               "guide, with the skill-creator component behind each step and what it produced.", BODY))
+        scol = {"done": PASS, "warn": colors.HexColor("#9A6700"), "skipped": MUTED, "pending": MUTED,
+                "scheduled": MUTED}
+        rows = [["Stage", "Step", "Skills 2.0 component", "Result", "Status"]]
+        for r in ctx["steps"]:
+            rows.append([r["stage"], r["step"], r["component"],
+                         r["result"] + (f" - {r['note']}" if r.get("note") else ""),
+                         Paragraph(f'<font color="{scol.get(r["status"], MUTED).hexval()}"><b>{r["status"]}</b></font>',
+                                   CELL)])
+        story.append(_table(rows, [30*mm, 52*mm, 62*mm, W - 166*mm, 22*mm], zebra=True))
+
     # ---- Headline ------------------------------------------------------------------------------
+    story.append(PageBreak())
     story.append(Paragraph("Headline", H2))
     if an.get("headline"):
         story.append(Paragraph(escape(an["headline"]), BODY))
@@ -269,6 +327,28 @@ def render_pdf(path: Path, ctx: dict) -> None:
     per = (W - 16*mm) / (len(head) - 1)
     story.append(_table(rows, [16*mm] + [per] * (len(head) - 1), zebra=True))
 
+    us = ctx.get("usage")
+    if us:
+        story.append(Paragraph("Token usage", H2))
+        rows = [["Model", "Config", "Runs", "Input", "Output", "Cache read", "Cache write", "Total tokens", "Cost"]]
+        for key, u in us["by_run_config"].items():
+            m, conf = key.split("|")
+            rows.append([mlabels.get(m, m), label.get(conf, conf), str(u["calls"]), f"{u['input']:,}",
+                         f"{u['output']:,}", f"{u['cache_read']:,}", f"{u['cache_write']:,}", f"{u['total']:,}",
+                         f"${u['cost_usd']:.3f}"])
+        story.append(_table(rows, [34*mm, 30*mm, 16*mm] + [(W - 80*mm - 24*mm) / 5] * 5 + [24*mm], zebra=True))
+        story.append(Spacer(1, 5))
+        rows = [["Stage", "Calls", "Input", "Output", "Cache read + write", "Total tokens", "Cost"]]
+        for stage, u in us["by_stage"].items():
+            rows.append([stage, str(u["calls"]), f"{u['input']:,}", f"{u['output']:,}",
+                         f"{u['cache_read'] + u['cache_write']:,}", f"{u['total']:,}", f"${u['cost_usd']:.3f}"])
+        t = us["total"]
+        rows.append([Paragraph("<b>Total</b>", CELL), Paragraph(f"<b>{t['calls']}</b>", CELL), f"{t['input']:,}",
+                     f"{t['output']:,}", f"{t['cache_read'] + t['cache_write']:,}",
+                     Paragraph(f"<b>{t['total']:,}</b>", CELL), Paragraph(f"<b>${t['cost_usd']:.3f}</b>", CELL)])
+        story.append(_table(rows, [70*mm, 16*mm] + [(W - 86*mm) / 5] * 5))
+        story.append(Paragraph("Not metered: " + "; ".join(us.get("not_metered", [])) + ".", SUB))
+
     # ---- What differed -------------------------------------------------------------------------
     if an.get("case_notes"):
         story.append(Paragraph("What differed in each case", H2))
@@ -301,21 +381,48 @@ def render_pdf(path: Path, ctx: dict) -> None:
     n_res = len(head) - 3
     story.append(_table(rows, [16*mm, W - 16*mm - 26*mm - 21*mm * n_res, 26*mm] + [21*mm] * n_res, zebra=True))
 
-    # ---- Trigger evals -------------------------------------------------------------------------
+    fails = ctx.get("failures")
+    if fails is not None:
+        story.append(Paragraph("Specific failures with the skill", H2))
+        if fails:
+            rows = [["Model", "Case", "Run", "Check", "Grader evidence"]]
+            for f in fails:
+                rows.append([mlabels.get(f["model"], f["model"]), str(f["case"]), str(f["run"]), f["check"],
+                             f["evidence"]])
+            story.append(_table(rows, [28*mm, 14*mm, 12*mm, 80*mm, W - 134*mm], zebra=True))
+        else:
+            story.append(Paragraph("None - every check passed in every with-skill run.", BODY))
+
+    # ---- Trigger optimization ------------------------------------------------------------------
     trig = ctx.get("trigger")
+    dr = an.get("description_review") or {}
+    if trig or dr:
+        story.append(PageBreak())
+        story.append(Paragraph("Trigger optimization", H2))
     if trig:
         s = trig["summary"]
-        story.append(Paragraph("Description triggering", H2))
+        tm = ctx.get("trigger_model") or models[-1]
         story.append(Paragraph(
             f"{s['passed']} of {s['total']} trigger queries behaved correctly ({s['accuracy']:.0%}) on "
-            f"{mlabels[models[0]]}. Recall on should-trigger queries "
+            f"{escape(model_label(tm))}. Recall on should-trigger queries "
             f"{'-' if s['recall'] is None else format(s['recall'], '.0%')}; false triggers on near-miss "
             f"queries {'-' if s['false_trigger_rate'] is None else format(s['false_trigger_rate'], '.0%')}.", BODY))
-        misses = [r for r in trig["results"] if not r["pass"]]
-        if misses:
-            rows = [["Query", "Should trigger", "Trigger rate"]] + [
-                [r["query"], "yes" if r["should_trigger"] else "no", f"{r['trigger_rate']:.0%}"] for r in misses]
-            story.append(_table(rows, [W - 60*mm, 30*mm, 30*mm]))
+    if dr:
+        story.append(Paragraph(f"<b>Description review: {escape(dr.get('assessment', ''))}.</b> "
+                               f"{escape(dr.get('reason', ''))}"
+                               + (f" Overlaps with: {escape(', '.join(dr['overlaps_with']))}."
+                                  if dr.get("overlaps_with") else ""), BODY))
+        if dr.get("suggested_description"):
+            story.append(Paragraph("<b>Suggested description</b> (says when to use the skill and when not to):", BODY))
+            story.append(Paragraph(escape(dr["suggested_description"]),
+                                   ParagraphStyle("sd", parent=BODY, leftIndent=10, textColor=colors.HexColor("#312E81"))))
+    if trig:
+        rows = [["Query", "Should trigger", "Trigger rate", "Result"]]
+        for r in sorted(trig["results"], key=lambda r: (r["pass"], not r["should_trigger"])):
+            rows.append([r["query"], "yes" if r["should_trigger"] else "no (near miss)", f"{r['trigger_rate']:.0%}",
+                         Paragraph(f'<font color="{(PASS if r["pass"] else FAIL).hexval()}"><b>'
+                                   f'{"correct" if r["pass"] else "wrong"}</b></font>', CELL)])
+        story.append(_table(rows, [W - 90*mm, 32*mm, 28*mm, 30*mm], zebra=True))
 
     # ---- Recommendations -----------------------------------------------------------------------
     recs = list(an.get("fix_suggestions", []))
@@ -339,19 +446,36 @@ def render_pdf(path: Path, ctx: dict) -> None:
 
     # ---- Method and limits ---------------------------------------------------------------------
     story.append(PageBreak())
-    story.append(Paragraph("Test cases and method", H2))
-    rows = [["Case", "Type", "Prompt (short)"]]
+    story.append(Paragraph("Test cases used", H2))
+    meta = {str(c["eval_id"]): c for c in ctx.get("cases", [])}
+    rows = [["Case", "Type / source", "Test prompt", "Expected output and checks"]]
     for c in mx["cases"]:
-        rows.append([str(c["id"]), c["type"].replace("_", " "), re.sub(r"\s+", " ", c["prompt"])[:220]])
-    story.append(_table(rows, [16*mm, 34*mm, W - 50*mm], zebra=True))
+        md = meta.get(str(c["id"]), {})
+        checks = "".join(f"<br/>&bull; {escape(k['text'])}" for k in c["checks"])
+        files = md.get("files") or []
+        rows.append([Paragraph(f"<b>{c['id']}</b><br/>{escape(c['description'])}", CELL),
+                     Paragraph(f"{escape(c['type'].replace('_', ' '))}<br/><font color='#59636E'>"
+                               f"{escape(md.get('source', 'evals/evals.json'))}</font>", CELL),
+                     Paragraph(escape(c["prompt"].strip()).replace("\n", "<br/>")
+                               + (f"<br/><font color='#59636E'>Input files: "
+                                  f"{escape(', '.join(Path(f).name for f in files))}</font>" if files else ""), CELL),
+                     Paragraph((f"<i>{escape(md['expected_output'])}</i>" if md.get("expected_output") else "")
+                               + checks, CELL)])
+    story.append(_table(rows, [34*mm, 30*mm, (W - 64*mm) * 0.55, (W - 64*mm) * 0.45], zebra=True))
     story.append(Spacer(1, 6))
     story.append(Paragraph(
         f"Each run used headless Claude Code (<font name='Courier'>claude -p</font>) in its own empty folder, "
         f"with the skill installed under .claude/skills/ for the skill configuration and absent (or the "
         f"previous version) for the baseline. Script checks ran deterministically; other checks were graded "
         f"by {mlabels.get(ctx['grader_model'], model_label(ctx['grader_model']))} using skill-creator's "
-        f"grader. Narrative sections were written by the analyst pass; all numbers, the verdict and the "
+        f"grader; the blind A/B comparison used skill-creator's comparator agent. Narrative sections were written by the analyst pass; all numbers, the verdict and the "
         f"tables are computed from the graded runs. Total model cost ${ctx['cost_usd']:.2f}.", BODY))
+    rb = ctx.get("rebench")
+    if rb:
+        story.append(Paragraph("When to re-benchmark", H2))
+        story += _bullets([f"Next scheduled re-benchmark: {rb['next_due']}"
+                           + (f" (last approved evaluation {rb['last_approved']})" if rb.get("last_approved") else
+                              " (no approved evaluation yet)")] + [w[0].upper() + w[1:] for w in rb["when"]])
     story.append(Paragraph("Limits of this evaluation", H2))
     story += _bullets(ctx.get("limits", []) + an.get("extra_limits", []))
 

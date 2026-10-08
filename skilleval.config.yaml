@@ -27,6 +27,22 @@ trigger_eval:
   full_scan: true             # keep watching after Claude's first Read/Bash (it often inspects the file first)
   max_turns: 4
 
+comparison:
+  # Skills 2.0 A/B benchmark: skill-creator's blind comparator judges with-skill vs baseline outputs
+  # without knowing which is which. Win rate >= 70% keep, 50-70% refine, < 50% remove or rewrite.
+  enabled: true
+  model: null                 # judge; default = execution.grader_model
+  include_should_not_trigger: false
+  timeout_seconds: 900
+
+targets:
+  # Skills 2.0 pass-rate targets for "re-run until the threshold is met". Set skill_kind per skill in
+  # skills/<name>/evals/eval-config.yaml (critical = compliance/safety/brand rules; preference = style).
+  skill_kind: preference      # preference | critical
+  critical_pass_rate: 0.90
+  preference_pass_rate: 0.80
+  rebenchmark_days: 90        # re-benchmark at least quarterly
+
 gate:
   # Hard failures block the review step unless the run was started with allow_failed_gate.
   min_pass_rate: 0.80             # mean assertion pass rate of the new skill
