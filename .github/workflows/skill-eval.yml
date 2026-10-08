@@ -100,6 +100,28 @@ jobs:
           npm install -g @anthropic-ai/claude-code
           claude --version
 
+      - name: Check model access (fails fast with the real error)
+        if: inputs.executor != 'mock'
+        run: |
+          if [ -z "$ANTHROPIC_API_KEY" ] && [ "$CLAUDE_CODE_USE_BEDROCK" != "1" ]; then
+            echo "::error::The ANTHROPIC_API_KEY secret is empty or missing. Add it under Settings -> Secrets and variables -> Actions -> Repository secrets (exact name ANTHROPIC_API_KEY)."
+            exit 1
+          fi
+          MODEL=$(python -c "from skilleval.config import load_config; print(load_config()['execution']['models'][0])")
+          if [ -n "$MODELS_INPUT" ]; then MODEL=$(echo "$MODELS_INPUT" | cut -d, -f1 | tr -cd 'a-z0-9.-'); fi
+          set +e
+          claude -p "Reply with the single word OK" --model "$MODEL" --output-format json < /dev/null > preflight.json 2> preflight.err
+          RC=$?
+          set -e
+          if python -c "import json,sys; d=json.load(open('preflight.json')); sys.exit(1 if d.get('is_error') else 0)" 2>/dev/null && [ $RC -eq 0 ]; then
+            echo "Model access OK: $MODEL"
+          else
+            MSG=$(python -c "import json; print(json.load(open('preflight.json')).get('result',''))" 2>/dev/null || true)
+            [ -z "$MSG" ] && MSG=$(tail -c 400 preflight.err; tail -c 400 preflight.json)
+            echo "::error::Claude could not run with model $MODEL (exit $RC): $MSG"
+            exit 1
+          fi
+
       - name: Select skills
         id: select
         run: |

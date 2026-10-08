@@ -107,6 +107,7 @@ def evaluate_skill(skill_path: Path, workspace: Path, cfg: dict, old_snapshot: P
 
     execute = EXECUTORS[ex["executor"]]
     harness_errors = {m: 0 for m in models}
+    error_messages: list[str] = []
     not_triggered = {m: 0 for m in models}
 
     def work(spec: RunSpec):
@@ -119,6 +120,8 @@ def evaluate_skill(skill_path: Path, workspace: Path, cfg: dict, old_snapshot: P
         for i, fut in enumerate(as_completed(futures), 1):
             spec, metrics = fut.result()
             harness_errors[spec.model] += int(bool(metrics.get("harness_error")))
+            if metrics.get("harness_error_message"):
+                error_messages.append(f"{spec.model}: {metrics['harness_error_message']}")
             if metrics.get("skill_triggered") is False and spec.case.type != "should_not_trigger":
                 not_triggered[spec.model] += 1
             log(f"  [{i}/{len(specs)}] {spec.model}/{spec.case.dirname}/{spec.config}/run-{spec.run_number}")
@@ -163,6 +166,15 @@ def evaluate_skill(skill_path: Path, workspace: Path, cfg: dict, old_snapshot: P
         decision["reason"] = ("This run compared the new version with the previous one, which shows whether the "
                               "change is an improvement but not whether the skill is still needed. Run with "
                               "baseline without_skill (the scheduled review does) for the usefulness verdict.")
+    failed_runs = sum(harness_errors.values())
+    if failed_runs:
+        # A verdict computed from runs that never executed would be meaningless (and misleading).
+        top = sorted(set(error_messages), key=error_messages.count, reverse=True)[:3]
+        decision = {**decision, "overall": "NOT ASSESSED", "models": [], "outlook": [], "trend_alerts": [],
+                    "harness_errors": top,
+                    "reason": f"{failed_runs} of {len(specs)} runs failed to execute, so no verdict was "
+                              f"computed. Error: {top[0] if top else 'unknown'}"}
+        log(f"{name}: {failed_runs}/{len(specs)} runs failed - {top[0] if top else ''}")
     (out / "verdict.json").write_text(json.dumps(decision, indent=2))
 
     last = load_last_approved(results_dir, name) if results_dir else None
@@ -246,6 +258,8 @@ def render_summary(m: dict, matrix: dict, dec: dict, gate: dict, trigger: dict |
     lines = [f"## {icon[gate['status']]} Skill eval: `{m['skill']}` — gate {gate['status'].upper()} · "
              f"verdict {vicon.get(dec['overall'], '')} **{dec['overall']}**", "",
              f"> {dec['reason']}", "",
+             *([f"**Run errors:** " + "; ".join(f"`{e}`" for e in dec["harness_errors"]), ""]
+               if dec.get("harness_errors") else []),
              f"Version `{m['skill_version']}` · models {', '.join(f'`{x}`' for x in m['models'])} · "
              f"grader `{m['grader_model']}` · {len(m['evals'])} evals × {len(m['configurations'])} configs × "
              f"{m['runs_per_config']} runs · cost ${m['cost_usd']}", "",

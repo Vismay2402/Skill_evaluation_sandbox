@@ -171,7 +171,13 @@ def run_claude_code(spec: RunSpec) -> dict:
                         "cache_read_input_tokens"))
     files_created = sorted(str(p.relative_to(out_dir)) for p in out_dir.rglob("*")
                            if p.is_file() and p.name != "final_response.md")
-    harness_error = timed_out or rc != 0 or is_error
+    harness_error = timed_out or rc != 0 or is_error or not result_evt
+    error_message = ""
+    if harness_error:
+        plain = [l for l in stdout.splitlines() if l.strip() and not l.lstrip().startswith("{")]
+        candidates = [final_text if is_error else "", stderr.strip(), "\n".join(plain)]
+        error_message = next((c.strip().splitlines()[-1] for c in candidates if c and c.strip()),
+                             f"claude -p exited with code {rc} and no output")[:400]
     metrics = {
         "tool_calls": dict(tools),
         "total_tool_calls": sum(tools.values()),
@@ -179,6 +185,7 @@ def run_claude_code(spec: RunSpec) -> dict:
         "files_created": files_created,
         "errors_encountered": tool_errors + (1 if harness_error else 0),
         "harness_error": harness_error,
+        "harness_error_message": error_message,
         "output_chars": sum(p.stat().st_size for p in out_dir.rglob("*") if p.is_file()),
         "transcript_chars": len(md),
         "skill_triggered": _skill_triggered(events, spec.skill_name) if spec.skill_src else None,
