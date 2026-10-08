@@ -1,0 +1,89 @@
+{
+  "skill_name": "csv-data-profiler",
+  "evals": [
+    {
+      "id": 1,
+      "name": "orders-first-look",
+      "prompt": "finance just dropped orders.csv on me before tomorrow's revenue review. can you take a quick look and tell me if anything in it is off before I build the dashboard?",
+      "expected_output": "profile.md with overview, column table and issues incl. text in amount, duplicate order 1005, missing date",
+      "files": [
+        "evals/files/orders.csv"
+      ],
+      "expectations": [
+        {
+          "text": "profile.md has Overview, Columns and Issues sections and reports 8 rows and 1 duplicate row",
+          "script": "evals/checks/profile_structure.py",
+          "category": "org_knowledge"
+        },
+        {
+          "text": "The Issues section flags that the amount column contains a non-numeric value ('abc')",
+          "category": "quality"
+        },
+        {
+          "text": "The report flags order_id 1005 as a duplicated ID",
+          "category": "quality"
+        },
+        {
+          "text": "The coupon column is reported as mostly null (7 of 8 rows, about 88%)",
+          "category": "quality"
+        },
+        {
+          "text": "The missing order_date for order 1006 is reported",
+          "category": "quality"
+        }
+      ],
+      "type": "standard",
+      "description": "First look at orders file"
+    },
+    {
+      "id": 2,
+      "name": "column-table-exact",
+      "prompt": "Give me a column-by-column breakdown of orders.csv (types, nulls, distincts, ranges). I'm pasting it into a data contract so the numbers must be exact.",
+      "expected_output": "Columns table with exact per-column stats",
+      "files": [
+        "evals/files/orders.csv"
+      ],
+      "expectations": [
+        {
+          "text": "The Columns section is a single markdown table with columns: column, type, nulls, null %, distinct, min, max",
+          "category": "org_knowledge"
+        },
+        {
+          "text": "region is reported with 4 distinct values",
+          "category": "quality"
+        },
+        {
+          "text": "customer is reported with 5 distinct values",
+          "category": "quality"
+        },
+        {
+          "text": "order_date min is 2026-01-03 and max is 2026-01-08",
+          "category": "quality"
+        }
+      ],
+      "type": "edge",
+      "description": "Exact column table for a data contract"
+    },
+    {
+      "id": 3,
+      "name": "convert-not-profile",
+      "type": "should_not_trigger",
+      "description": "CSV to JSON conversion (should not trigger)",
+      "prompt": "turn orders.csv into a JSON file keyed by order_id (orders.json) - just the conversion, nothing else",
+      "expected_output": "orders.json keyed by order_id, no profiling report",
+      "files": [
+        "evals/files/orders.csv"
+      ],
+      "expectations": [
+        {
+          "text": "orders.json is produced with order_id as keys",
+          "category": "quality"
+        },
+        {
+          "text": "No profile.md or data-quality report is produced",
+          "category": "behavior"
+        }
+      ]
+    }
+  ]
+}

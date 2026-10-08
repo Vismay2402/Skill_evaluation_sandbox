@@ -1,0 +1,50 @@
+# Skill evaluation automation — repo-wide defaults.
+# A skill can override any of these in skills/<name>/evals/eval-config.yaml.
+
+skills_dir: skills            # where skill folders live (one folder per skill)
+results_dir: eval-results     # where approved results are committed
+registry_file: registry/skills-registry.json
+
+execution:
+  executor: claude-code       # claude-code (headless `claude -p`) | mock (dry run, no API calls)
+  # Models that run the skill, ordered from least to most capable. Every eval runs with and
+  # without the skill on each one - this is what shows whether newer models still need the skill.
+  models: [claude-haiku-5-5, claude-sonnet-5-5]   # sandbox: cheaper models
+  grader_model: claude-opus-5-5   # grades checks and writes the report narrative
+  runs_per_config: 1          # sandbox: 1 run (use 3 for real approvals)
+  max_parallel: 4             # concurrent claude -p processes
+  run_timeout_seconds: 900
+  max_budget_usd_per_run: 0.5 # sandbox: hard cap per claude -p session
+  baseline: auto              # auto | without_skill | old_skill | none
+                              # auto = old_skill if the skill exists on the base branch, else without_skill
+
+trigger_eval:
+  enabled: true               # runs only if evals/trigger_evals.json exists
+  runs_per_query: 3
+  threshold: 0.5
+
+gate:
+  # Hard failures block the review step unless the run was started with allow_failed_gate.
+  min_pass_rate: 0.80             # mean assertion pass rate of the new skill
+  min_delta_vs_baseline: 0.0      # new skill must not score below its baseline
+  max_regression_vs_last_approved: 0.05  # vs. the last approved result in eval-results/
+  min_trigger_accuracy: 0.80      # only applied when trigger evals ran
+  max_error_runs: 0               # runs where claude -p crashed / timed out
+  # Soft checks only produce warnings in the report
+  warn_stddev_above: 0.20         # flaky evals
+  warn_token_increase_pct: 50     # skill makes runs much more expensive
+
+report:
+  analyst: true               # Claude writes the narrative sections (numbers always come from code)
+  pdf: true                   # report.pdf in the style of the eval report template
+
+# Is the skill still worth having? Decided per model from the with/without-skill uplift.
+verdict:
+  production_models: []       # models your users actually run; empty = all models above.
+                              # The skill is kept while ANY production model still needs it.
+  keep_min_uplift_pts: 15     # >= this uplift (percentage points)          -> KEEP
+  slim_min_uplift_pts: 5      # between slim and keep                        -> KEEP, SLIM DOWN
+                              # below slim, with few unique checks           -> RETIRE CANDIDATE
+  retire_max_unique_checks: 1 # checks only the skill gets right; above this it is never "retire"
+  never_retire_categories: [safety]  # a unique check in these categories always means KEEP
+  trend_drop_alert_pts: 10    # flag when uplift on a model drops this much vs. last approved eval

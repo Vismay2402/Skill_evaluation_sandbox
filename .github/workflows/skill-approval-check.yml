@@ -1,0 +1,20 @@
+name: Skill approval check
+
+# Make this a REQUIRED status check on your default branch (Settings -> Branches/Rulesets).
+# It passes only when every skill changed in the PR has an approved evaluation in
+# eval-results/ for its exact current content - editing a skill after approval re-blocks the merge.
+
+on:
+  pull_request:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - run: pip install -r requirements.txt
+      - name: Every changed skill has an approved evaluation for its current version
+        run: python -m skilleval verify --changed origin/${{ github.base_ref }}

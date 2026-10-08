@@ -1,0 +1,9 @@
+order_id,customer,order_date,amount,region,coupon
+1001,Asha,2026-01-03,250.50,West,
+1002,Ravi,2026-01-04,99.00,North,NEW10
+1003,Meera,2026-01-04,1200.00,West,
+1004,Asha,2026-01-05,abc,South,
+1005,Karan,2026-01-06,560.25,West,
+1005,Karan,2026-01-06,560.25,West,
+1006,Neha,,75.00,East,
+1007,Ravi,2026-01-08,310.00,North,

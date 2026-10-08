@@ -1,0 +1,265 @@
+name: Skill evaluation
+
+# Three ways in:
+#  1. Automatic - a pull request that adds or changes anything under skills/
+#  2. Manual    - Actions tab -> "Skill evaluation" -> Run workflow (pick skills, models, runs)
+#  3. Scheduled - monthly usefulness review of every skill on the current models: is each skill
+#                 still worth having as models improve? Opens an issue when a verdict changes.
+#
+# Flow: evaluate (runs on every model + grading + benchmark + verdict + report.pdf + gate)
+#       -> human-review (GitHub Environment with required reviewers = the human gate)
+#       -> on approval, results, report and history are committed to git
+
+on:
+  pull_request:
+    paths: ["skills/**"]
+  # schedule:                # monthly usefulness review - disabled in the sandbox to avoid cost
+  #   - cron: "17 3 1 * *"
+  workflow_dispatch:
+    inputs:
+      skills:
+        description: 'Skills to evaluate: comma-separated folder names, or "all"'
+        required: true
+        default: all
+      models:
+        description: "Models, comma-separated, least to most capable (blank = skilleval.config.yaml)"
+        required: false
+        default: ""
+      runs_per_config:
+        description: Repeats per eval per configuration
+        type: choice
+        options: ["1", "3", "5"]
+        default: "1"
+      baseline:
+        description: What the skill is compared against
+        type: choice
+        options: [auto, without_skill, old_skill, none]
+        default: auto
+      trigger_evals:
+        description: Also test description triggering
+        type: boolean
+        default: true
+      allow_failed_gate:
+        description: Send to human review even if the automated gate fails
+        type: boolean
+        default: false
+      executor:
+        description: "mock = dry run of the whole flow with no model calls"
+        type: choice
+        options: [claude-code, mock]
+        default: claude-code
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+  actions: read
+
+concurrency:
+  group: skill-eval-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+
+env:
+  WORKSPACE: skilleval-workspace
+  HEAD_REF: ${{ github.head_ref }}
+  SKILLS_INPUT: ${{ inputs.skills }}
+  MODELS_INPUT: ${{ inputs.models }}
+  BASE_REF: ${{ github.event_name == 'pull_request' && format('origin/{0}', github.base_ref) || format('origin/{0}', github.event.repository.default_branch || 'main') }}
+
+jobs:
+  evaluate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 240
+    outputs:
+      has_results: ${{ steps.run.outputs.has_results }}
+      gate_failed: ${{ steps.run.outputs.gate_failed }}
+    env:
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      # To run on Amazon Bedrock instead, set these repo variables/secrets and drop ANTHROPIC_API_KEY:
+      CLAUDE_CODE_USE_BEDROCK: ${{ vars.CLAUDE_CODE_USE_BEDROCK }}
+      AWS_REGION: ${{ vars.AWS_REGION }}
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.ref || github.ref }}
+          token: ${{ secrets.SKILL_EVAL_BOT_TOKEN || github.token }}
+
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - uses: actions/setup-node@v4
+        with: { node-version: "22" }
+
+      - name: Install tooling
+        run: |
+          pip install -r requirements.txt
+          # Libraries the skills under test may need at runtime (pandas, openpyxl, ...)
+          [ -f requirements-skills.txt ] && pip install -r requirements-skills.txt
+          npm install -g @anthropic-ai/claude-code
+          claude --version
+
+      - name: Select skills
+        id: select
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            ARGS="--changed $BASE_REF"
+            NAMES=$(python -m skilleval changed --base "$BASE_REF")
+          elif [ "${{ github.event_name }}" = "schedule" ] || [ "$SKILLS_INPUT" = "all" ]; then
+            ARGS="--all"; NAMES=$(python -m skilleval list | awk '{print $1}')
+          else
+            ARGS=""; NAMES=""
+            for s in $(echo "$SKILLS_INPUT" | tr ',' ' ' | tr -cd 'a-z0-9 -'); do ARGS="$ARGS --skill $s"; NAMES="$NAMES $s"; done
+          fi
+          echo "args=$ARGS" >> "$GITHUB_OUTPUT"
+          echo "names=$(echo $NAMES)" >> "$GITHUB_OUTPUT"
+          echo "Skills selected: $(echo $NAMES)"
+
+      - name: Draft evals for skills that have none
+        if: github.event_name == 'pull_request'
+        run: |
+          DRAFTED=""
+          for s in ${{ steps.select.outputs.names }}; do
+            if [ ! -f "skills/$s/evals/evals.json" ]; then
+              python -m skilleval draft-evals --skill "$s"; DRAFTED="$DRAFTED $s"
+            fi
+          done
+          if [ -n "$DRAFTED" ]; then
+            git config user.name "skill-eval-bot"; git config user.email "skill-eval-bot@users.noreply.github.com"
+            git add skills/*/evals && git commit -m "evals: draft eval set for$DRAFTED (needs human review)"
+            git push origin "HEAD:$HEAD_REF"
+            {
+              echo "## 📝 Eval sets drafted for:$DRAFTED"
+              echo
+              echo "Claude drafted \`evals/evals.json\` and \`evals/trigger_evals.json\` and pushed them to this PR."
+              echo "Review and edit them (they define what 'good' means for the skill), then push - the evaluation runs on that push."
+            } > drafted.md
+            cat drafted.md >> "$GITHUB_STEP_SUMMARY"
+            gh pr comment ${{ github.event.pull_request.number }} --body-file drafted.md
+            exit 1
+          fi
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      - name: Validate skills and eval sets
+        run: python -m skilleval validate ${{ steps.select.outputs.args }}
+
+      - name: Run evaluation
+        id: run
+        run: |
+          OPTS="--workspace $WORKSPACE --base-ref $BASE_REF"
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            OPTS="$OPTS --runs ${{ inputs.runs_per_config }} --baseline ${{ inputs.baseline }} --executor ${{ inputs.executor }}"
+            [ -n "$MODELS_INPUT" ] && OPTS="$OPTS --models $(echo "$MODELS_INPUT" | tr -cd 'a-z0-9.,-')"
+            [ "${{ inputs.trigger_evals }}" = "false" ] && OPTS="$OPTS --no-trigger"
+          fi
+          # The usefulness review always compares against no skill at all.
+          [ "${{ github.event_name }}" = "schedule" ] && OPTS="$OPTS --baseline without_skill"
+          set +e
+          python -m skilleval run ${{ steps.select.outputs.args }} $OPTS --allow-failed-gate
+          RC=$?
+          set -e
+          [ $RC -ne 0 ] && exit $RC
+          FAILED=$(python -c "import json;print(len(json.load(open('$WORKSPACE/status.json'))['failed_gate']))")
+          EVALUATED=$(python -c "import json;print(len(json.load(open('$WORKSPACE/status.json'))['evaluated']))")
+          echo "gate_failed=$([ "$FAILED" -gt 0 ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
+          echo "has_results=$([ "$EVALUATED" -gt 0 ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
+          cat "$WORKSPACE/SUMMARY.md" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Alert on verdict changes (retire candidates, shrinking value)
+        if: github.event_name != 'pull_request' && steps.run.outputs.has_results == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python -m skilleval changes --workspace "$WORKSPACE" --output changes.md
+          if [ -s changes.md ]; then
+            {
+              echo "The skill usefulness review found skills that need a decision."
+              echo
+              cat changes.md
+              echo
+              echo "Reports: download \`skill-eval-${{ github.run_id }}\` from [the run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}) and open each skill's \`report.pdf\`."
+            } > issue.md
+            gh issue create --title "Skill usefulness review: action needed ($(date -u +%Y-%m))" --body-file issue.md \
+              --label skill-review 2>/dev/null || gh issue create --title "Skill usefulness review: action needed ($(date -u +%Y-%m))" --body-file issue.md
+          fi
+
+      - name: Upload results (report.pdf, and review.html to inspect every output)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: skill-eval-${{ github.run_id }}
+          path: ${{ env.WORKSPACE }}
+          retention-days: 30
+
+      - name: Comment on pull request
+        if: github.event_name == 'pull_request' && steps.run.outputs.has_results == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          {
+            cat "$WORKSPACE/SUMMARY.md"
+            echo
+            echo "**Next:** download the \`skill-eval-${{ github.run_id }}\` artifact from [this run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}), read \`<skill>/report.pdf\` (open \`review.html\` to inspect individual outputs), then approve or reject the **human-review** step there."
+          } > comment.md
+          gh pr comment ${{ github.event.pull_request.number }} --body-file comment.md --edit-last --create-if-none \
+            || gh pr comment ${{ github.event.pull_request.number }} --body-file comment.md
+
+      - name: Stop if the automated gate failed
+        if: steps.run.outputs.gate_failed == 'true' && github.event_name != 'schedule' && !(github.event_name == 'workflow_dispatch' && inputs.allow_failed_gate)
+        run: |
+          echo "::error::Automated quality gate failed - see the summary. Fix the skill or evals and push again, or re-run manually with allow_failed_gate."
+          exit 1
+
+  human-review:
+    needs: evaluate
+    if: needs.evaluate.outputs.has_results == 'true'
+    runs-on: ubuntu-latest
+    # The human gate: configure this environment with "Required reviewers"
+    # (Settings -> Environments -> skill-eval-approval). The job waits until a reviewer approves.
+    environment: skill-eval-approval
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.ref || github.ref }}
+          # A bot/app token makes the results commit trigger the "Skill approval check" workflow.
+          token: ${{ secrets.SKILL_EVAL_BOT_TOKEN || github.token }}
+
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - run: pip install -r requirements.txt
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: skill-eval-${{ github.run_id }}
+          path: ${{ env.WORKSPACE }}
+
+      - name: Store approved results in git
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          APPROVER=$(gh api "repos/${{ github.repository }}/actions/runs/${{ github.run_id }}/approvals" \
+                       --jq '[.[] | select(.state=="approved")][-1].user.login' 2>/dev/null || true)
+          COMMENT=$(gh api "repos/${{ github.repository }}/actions/runs/${{ github.run_id }}/approvals" \
+                       --jq '[.[] | select(.state=="approved")][-1].comment' 2>/dev/null || true)
+          APPROVER=${APPROVER:-${{ github.triggering_actor }}}
+          git config user.name "skill-eval-bot"; git config user.email "skill-eval-bot@users.noreply.github.com"
+          INCLUDE=""
+          [ "${{ needs.evaluate.outputs.gate_failed }}" = "true" ] && INCLUDE="--include-failed"
+          python -m skilleval publish --workspace "$WORKSPACE" --approver "$APPROVER" --note "$COMMENT" \
+            --run-url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
+            --commit $INCLUDE
+
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            # Results ride along with the skill in the same PR, so they merge together.
+            git push origin "HEAD:$HEAD_REF"
+          else
+            BRANCH="skill-eval/results-${{ github.run_id }}"
+            git push origin HEAD:"$BRANCH"
+            gh pr create --base "${{ github.ref_name }}" --head "$BRANCH" \
+              --title "Skill eval results (${{ github.event_name == 'schedule' && 'monthly usefulness review' || format('run {0}', github.run_id) }}) approved by $APPROVER" \
+              --body-file "$WORKSPACE/SUMMARY.md"
+          fi
+          echo "Approved by **$APPROVER** - results committed." >> "$GITHUB_STEP_SUMMARY"

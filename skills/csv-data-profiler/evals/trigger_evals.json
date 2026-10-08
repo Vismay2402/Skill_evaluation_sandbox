@@ -1,0 +1,18 @@
+[
+  {"query": "can you sanity check this sales_q3.csv before I load it into snowflake? want to know about nulls and weird values", "should_trigger": true},
+  {"query": "audit the customer export (customers_2026.tsv) for data quality issues, my manager wants a summary", "should_trigger": true},
+  {"query": "first look at vendor_master.csv pls - how many rows, what columns, anything broken?", "should_trigger": true},
+  {"query": "I got a csv dump from the CRM, profile it and tell me which columns are mostly empty", "should_trigger": true},
+  {"query": "before training the churn model, check churn_features.csv for duplicates and constant columns", "should_trigger": true},
+  {"query": "what's the null percentage per column in inventory.csv and are there type problems?", "should_trigger": true},
+  {"query": "data quality report for the attached shipments file (tab separated) please", "should_trigger": true},
+  {"query": "is this export clean enough to use? transactions_jan.csv has like 40k rows", "should_trigger": true},
+  {"query": "convert orders.csv to parquet partitioned by region", "should_trigger": false},
+  {"query": "write a SQL query that finds duplicate order_ids in the orders table in snowflake", "should_trigger": false},
+  {"query": "make a bar chart of revenue by region from sales.csv for my deck", "should_trigger": false},
+  {"query": "merge customers.csv and orders.csv on customer_id and save the result", "should_trigger": false},
+  {"query": "how do I make pandas read_csv faster for a 5GB file?", "should_trigger": false},
+  {"query": "explain the difference between data profiling and data validation frameworks like great expectations", "should_trigger": false},
+  {"query": "fix the date format in column order_date of orders.csv to dd-mm-yyyy", "should_trigger": false},
+  {"query": "set up a dbt test that fails if amount is null in the orders model", "should_trigger": false}
+]
