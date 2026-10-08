@@ -35,12 +35,15 @@ def run_trigger_eval(skill_path: Path, eval_set: list[dict], out_file: Path, cfg
                  "--skill-path", str(Path(skill_path).resolve()),
                  "--runs-per-query", str(t["runs_per_query"]),
                  "--trigger-threshold", str(t["threshold"]),
-                 "--model", cfg["execution"]["model"], "--num-workers",
-                 str(cfg["execution"]["max_parallel"])],
+                 "--model", t.get("model") or cfg["execution"]["models"][-1],
+                 "--timeout", str(t.get("timeout_seconds", 120)), "--max-turns", str(t.get("max_turns", 4)),
+                 "--verbose", "--num-workers", str(cfg["execution"]["max_parallel"])]
+                + (["--full-scan"] if t.get("full_scan", True) else []),
                 cwd=tmp, env=env, capture_output=True, text=True, timeout=3600)
             if proc.returncode != 0:
                 raise RuntimeError(f"trigger eval failed: {proc.stderr[-2000:]}")
             out = json.loads(proc.stdout)
+            out["stderr_tail"] = (proc.stderr or "")[-3000:]
     res = out["results"]
     passed = sum(1 for r in res if r["pass"])
     pos = [r for r in res if r["should_trigger"]]

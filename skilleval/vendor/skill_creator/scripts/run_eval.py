@@ -39,6 +39,8 @@ def run_single_query(
     timeout: int,
     project_root: str,
     model: str | None = None,
+    full_scan: bool = False,
+    max_turns: int = 4,
 ) -> bool:
     """Run a single query and return whether the skill was triggered.
 
@@ -76,6 +78,8 @@ def run_single_query(
         ]
         if model:
             cmd.extend(["--model", model])
+        if full_scan:
+            cmd.extend(["--max-turns", str(max_turns)])
 
         # Remove CLAUDECODE env var to allow nesting claude -p inside a
         # Claude Code session. The guard is for interactive terminal conflicts;
@@ -86,6 +90,7 @@ def run_single_query(
             cmd,
             stdout=subprocess.PIPE,
             stderr=subprocess.DEVNULL,
+            stdin=subprocess.DEVNULL,
             cwd=project_root,
             env=env,
         )
@@ -137,7 +142,7 @@ def run_single_query(
                                 if tool_name in ("Skill", "Read"):
                                     pending_tool_name = tool_name
                                     accumulated_json = ""
-                                else:
+                                elif not full_scan:
                                     return False
 
                         elif se_type == "content_block_delta" and pending_tool_name:
@@ -149,8 +154,12 @@ def run_single_query(
 
                         elif se_type in ("content_block_stop", "message_stop"):
                             if pending_tool_name:
-                                return clean_name in accumulated_json
-                            if se_type == "message_stop":
+                                if clean_name in accumulated_json:
+                                    return True
+                                if not full_scan:
+                                    return False
+                                pending_tool_name = None
+                            elif se_type == "message_stop" and not full_scan:
                                 return False
 
                     # Fallback: full assistant message
@@ -165,7 +174,8 @@ def run_single_query(
                                 triggered = True
                             elif tool_name == "Read" and clean_name in tool_input.get("file_path", ""):
                                 triggered = True
-                            return triggered
+                            if not full_scan:
+                                return triggered
 
                     elif event.get("type") == "result":
                         return triggered
@@ -191,6 +201,8 @@ def run_eval(
     runs_per_query: int = 1,
     trigger_threshold: float = 0.5,
     model: str | None = None,
+    full_scan: bool = False,
+    max_turns: int = 4,
 ) -> dict:
     """Run the full eval set and return results."""
     results = []
@@ -207,6 +219,8 @@ def run_eval(
                     timeout,
                     str(project_root),
                     model,
+                    full_scan,
+                    max_turns,
                 )
                 future_to_info[future] = (item, run_idx)
 
@@ -266,6 +280,10 @@ def main():
     parser.add_argument("--runs-per-query", type=int, default=3, help="Number of runs per query")
     parser.add_argument("--trigger-threshold", type=float, default=0.5, help="Trigger rate threshold")
     parser.add_argument("--model", default=None, help="Model to use for claude -p (default: user's configured model)")
+    parser.add_argument("--full-scan", action="store_true",
+                        help="Keep watching after the first non-skill tool call (Claude often reads the "
+                             "file or runs ls before consulting a skill); capped by --max-turns")
+    parser.add_argument("--max-turns", type=int, default=4)
     parser.add_argument("--verbose", action="store_true", help="Print progress to stderr")
     args = parser.parse_args()
 
@@ -293,6 +311,8 @@ def main():
         runs_per_query=args.runs_per_query,
         trigger_threshold=args.trigger_threshold,
         model=args.model,
+        full_scan=args.full_scan,
+        max_turns=args.max_turns,
     )
 
     if args.verbose:

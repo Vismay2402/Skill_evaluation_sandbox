@@ -22,6 +22,10 @@ trigger_eval:
   enabled: true               # runs only if evals/trigger_evals.json exists
   runs_per_query: 3
   threshold: 0.5
+  model: null                 # default: most capable model in execution.models
+  timeout_seconds: 120        # per query; cold `claude -p` start in CI can exceed the old 30s
+  full_scan: true             # keep watching after Claude's first Read/Bash (it often inspects the file first)
+  max_turns: 4
 
 gate:
   # Hard failures block the review step unless the run was started with allow_failed_gate.
