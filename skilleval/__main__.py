@@ -317,6 +317,35 @@ def cmd_sync_workflow(args, cfg):
     print(f"dropdown now lists {len(names)} skills: {', '.join(names)}")
 
 
+def cmd_catalog(args, cfg):
+    from .catalog import write_all
+    print(f"wrote {write_all().relative_to(REPO_ROOT)} and eval-results/<skill>/EVALUATIONS.md")
+
+
+def cmd_history(args, cfg):
+    """How many times each skill has been evaluated and approved, with timestamps."""
+    from .catalog import evaluations, _ts
+    skills_dir, results_dir, _ = _paths(cfg)
+    for s in (args.skill or all_skills(skills_dir)):
+        rows = evaluations(results_dir, s)
+        print(f"{s}: {len(rows)} approved evaluation(s)")
+        for i, r in enumerate(rows):
+            print(f"  #{len(rows) - i}  {_ts(r['approved_at'])}  v{r['version'][:8]}  {','.join(r['models']):28} "
+                  f"pass {(r['pass_rate'] or 0):.0%}  {r['verdict'] or '-':18} by {r['approved_by']}")
+
+
+def cmd_notify_review(args, cfg):
+    """Email reviewers: results waiting for approval (with report.pdf), or approved and stored."""
+    from .notify import build_review_email, recipients, send
+    to = recipients(args.to, cfg)
+    subject, html, text, att = build_review_email(Path(args.workspace), args.run_url, args.repo, args.kind,
+                                                  args.pr_url or "", args.approver or "")
+    try:
+        send(to, subject, html, text, att)
+    except Exception as e:  # never fail the pipeline because of email
+        print(f"::warning::Could not send the review email: {e}")
+
+
 def main():
     p = argparse.ArgumentParser(prog="skilleval")
     p.add_argument("--config", default=None)
@@ -361,6 +390,14 @@ def main():
     mc.add_argument("--since"); mc.add_argument("--json", action="store_true")
     sw = sub.add_parser("sync-workflow", help="regenerate the skill dropdown in the Run workflow form")
     sw.add_argument("--check", action="store_true", help="fail if the dropdown is out of date")
+    sub.add_parser("catalog", help="regenerate EVALUATIONS.md from eval-results/")
+    hi = sub.add_parser("history", help="evaluation count and timestamps per skill")
+    hi.add_argument("--skill", action="append")
+    nr = sub.add_parser("notify-review", help="email reviewers about results")
+    nr.add_argument("--workspace", default="skilleval-workspace"); nr.add_argument("--to")
+    nr.add_argument("--run-url", default=""); nr.add_argument("--repo", default="")
+    nr.add_argument("--kind", choices=["pending", "approved"], default="pending")
+    nr.add_argument("--pr-url"); nr.add_argument("--approver")
     pb = sub.add_parser("publish")
     pb.add_argument("--workspace", default="skilleval-workspace")
     pb.add_argument("--approver", required=True); pb.add_argument("--note"); pb.add_argument("--run-url")
@@ -370,6 +407,7 @@ def main():
     cfg = load_config(config_path=Path(args.config) if args.config else None)
     {"list": cmd_list, "changed": cmd_changed, "validate": cmd_validate, "draft-evals": cmd_draft_evals,
      "run": cmd_run, "publish": cmd_publish, "import-cases": cmd_import_cases,
+     "catalog": cmd_catalog, "history": cmd_history, "notify-review": cmd_notify_review,
      "due": cmd_due, "sync-workflow": cmd_sync_workflow, "models-check": cmd_models_check, "verify": cmd_verify,
      "changes": cmd_changes}[args.cmd](args, cfg)
 

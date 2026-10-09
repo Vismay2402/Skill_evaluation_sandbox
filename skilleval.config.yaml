@@ -36,6 +36,12 @@ comparison:
   include_should_not_trigger: false
   timeout_seconds: 900
 
+review:
+  # People emailed when results wait for approval (report.pdf attached) and when they are approved.
+  # Needs the SMTP_* secrets (see README). The Run workflow form's reviewer_email overrides this list.
+  # Approving still happens in GitHub, by a required reviewer of the skill-eval-approval environment.
+  notify_emails: []           # e.g. [vismay.singh@company.com, skills-governance@company.com]
+
 schedule:
   # A daily lightweight check (.github/workflows/skill-eval-scheduler.yml) decides which skills are DUE;
   # it costs nothing on days with nothing due. Per-skill override in skills/<name>/evals/eval-config.yaml.

@@ -219,17 +219,58 @@ skilleval.config.yaml                   models, runs, schedule, gate thresholds,
    `SKILL_EVAL_WEBHOOK_URL` for Slack/Teams notifications.
    For Amazon Bedrock instead: variable `CLAUDE_CODE_USE_BEDROCK=1`, variable `AWS_REGION`, secrets
    `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY`, and set Bedrock model IDs in `skilleval.config.yaml`.
-3. **Human gate**: Settings → Environments → New environment `skill-eval-approval` → tick
-   *Required reviewers* and add the people (or team) who may approve skills. Optionally tick
-   *Prevent self-review*. (Required reviewers on private repos need GitHub Team or Enterprise.)
-4. **Merge protection**: in a branch ruleset for the default branch, require the status check
+3. **Human gate** (without this the approval step does **not** wait - GitHub creates the environment
+   unprotected and the run stores results as "unreviewed"): Settings → Environments → `skill-eval-approval`
+   → tick **Required reviewers** → add the people (up to 6) or a team → **Save protection rules**. Leave
+   *Prevent self-review* off while you are the only reviewer. Then every run pauses at **human-review** with a
+   yellow **Review deployments** button; clicking it opens the Approve / Reject dialog with a comment box.
+   GitHub notifies the reviewers (web + email, per their notification settings). Required reviewers work on
+   public repos on any plan; private repos need GitHub Enterprise.
+4. **Reviewer emails (optional)** - to email people (any address, with each `report.pdf` attached) when
+   results wait for approval and again when they are approved: add secrets `SMTP_HOST`, `SMTP_PORT`
+   (587 or 465), `SMTP_USERNAME`, `SMTP_PASSWORD`, `SMTP_FROM` (e.g. Office 365 `smtp.office365.com`,
+   Gmail `smtp.gmail.com` with an app password, SendGrid, Amazon SES), and list the addresses in
+   `skilleval.config.yaml` → `review.notify_emails` or the Run workflow form's **reviewer_email**.
+   Approving still happens in GitHub by a required reviewer - the email links straight to the run.
+5. **Merge protection**: in a branch ruleset for the default branch, require the status check
    `Skill approval check / verify`. It fails unless every changed skill has an approved result for its
    exact current content, so editing a skill after approval re-blocks the merge.
-5. **Bot token (recommended)**: add a fine-grained PAT or GitHub App token with `contents: write` and
+6. **Bot token (recommended)**: add a fine-grained PAT or GitHub App token with `contents: write` and
    `pull-requests: write` as `SKILL_EVAL_BOT_TOKEN`. Commits pushed with the default `GITHUB_TOKEN` don't
    trigger other workflows, so without it the approval check won't re-run on the results commit
    (re-run it manually in that case).
-6. Settings → Actions → General → allow GitHub Actions to create pull requests (needed for manual runs).
+7. Settings → Actions → General → allow GitHub Actions to create pull requests (needed for manual runs).
+
+## Where results are stored, and in what format
+
+Nothing is stored until a reviewer approves. On approval the results are committed (to the skill's PR, or
+to a new `skill-eval/results-<run id>` PR for manual runs) - so git is the database, every change is
+reviewed, and history is never lost.
+
+```
+EVALUATIONS.md                              all skills: number of evaluations, first/latest, verdict, approver
+registry/skills-registry.json               current approved version, pass rate, verdict per skill (machine-readable)
+eval-results/<skill>/
+  EVALUATIONS.md                            one row per evaluation: timestamp, version, models, pass rate,
+                                            A/B win rate, verdict, tokens, cost, approver, links
+  latest.json                               the currently approved evaluation (used by the merge check)
+  history.json                              per-model uplift over time (the "still useful?" trend)
+  <UTC timestamp>-<version>/                one folder per approved evaluation, e.g. 20261009T085039Z-5c0d71c1/
+    report.pdf                              the evaluation report
+    summary.md                              the job summary (renders on GitHub)
+    review.html                             skill-creator viewer: every prompt, output and grade
+    approval.json                           who approved, when, their comment, the run link
+    run.json                                models, configs, test-case source, pass rates, verdict, tokens, cost
+    verdict.json · gate.json · matrix.json · benchmark*.json · comparison.json · usage.json · steps.json
+    test_cases.json · trigger_results.json · analyst.json
+    runs/<model>/eval-<id>-<name>/<with_skill|without_skill>/run-<n>/
+      outputs/ (files the run produced + final_response.md) · grading.json · timing.json · transcript.md
+```
+
+All files are JSON, Markdown, HTML or PDF, so they are readable on GitHub, diffable, and easy to load into a
+dashboard or Snowflake later. `python -m skilleval history` prints the count and timestamps per skill.
+Every run - approved or not - is also listed under **Actions → Skill evaluation**, titled with the skill and
+model (e.g. *Skill eval: meeting-minutes on claude-sonnet-5-5*), with its artifact kept 30 days.
 
 ## Day-to-day use
 
