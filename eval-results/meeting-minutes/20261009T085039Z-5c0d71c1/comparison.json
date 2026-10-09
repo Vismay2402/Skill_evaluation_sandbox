@@ -1,0 +1,39 @@
+{
+  "judge_model": "claude-sonnet-5-5",
+  "baseline": "without_skill",
+  "by_model": {
+    "claude-sonnet-5-5": {
+      "comparisons": 2,
+      "skill_wins": 2,
+      "ties": 0,
+      "baseline_wins": 0,
+      "errors": 0,
+      "win_rate": 1.0,
+      "interpretation": "KEEP"
+    }
+  },
+  "results": [
+    {
+      "model": "claude-sonnet-5-5",
+      "case": 1,
+      "run": "run-1",
+      "skill_was": "B",
+      "winner": "B",
+      "outcome": "skill",
+      "reasoning": "B follows the expected minutes structure (Decisions, Action items, Open questions), uses YYYY-MM-DD dates, includes the Confidential line, and puts dbt 1.9 and Power BI under Open questions. A uses a topic-by-topic layout with no Open questions section, non-ISO and non-date due dates (e.g. 'End of next week'), and no confidentiality line.",
+      "skill_score": 10,
+      "baseline_score": 7
+    },
+    {
+      "model": "claude-sonnet-5-5",
+      "case": 2,
+      "run": "run-1",
+      "skill_was": "A",
+      "winner": "A",
+      "outcome": "skill",
+      "reasoning": "Both outputs capture the decision, Priya's action due 2026-10-31, and the unowned calendar invite item. A uses the literal UNASSIGNED owner and an 'Open questions' section phrased as a question, and flags missing attendees/title. B is clean but uses 'Unassigned' and 'Open Issues', and puts the date as 'End of month (2026-10-31)'. A is marginally more precise and structured as a minutes template.",
+      "skill_score": 9.7,
+      "baseline_score": 9.0
+    }
+  ]
+}

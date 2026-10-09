@@ -1,0 +1,46 @@
+{
+  "headline": "On Sonnet 5.5 the skill lifted the format-sensitive checks: it produced the Confidential line, Open questions section and house layout that the baseline missed in case 1. The main caveat is trigger reliability: the skill auto-triggered on 0 of 6 genuine minutes requests in the trigger eval (recall 0%), so in real use it will rarely load unprompted.",
+  "made_difference": [
+    "Case 1: with the skill, minutes.md has the Confidential - internal distribution only line because Victaulic's Tom is named; the baseline omitted it.",
+    "Case 1: the skill produced a literal 'Open questions' section containing the dbt 1.9 upgrade and the Power BI request; the baseline used 'Open items' and wrote 'Decision: none today' inside the dbt section.",
+    "Case 1: the skill's output uses the fixed Decisions / Action items / Open questions headings and ISO due dates (2026-10-09, 2026-10-16). The baseline wrote 'Fri 9 Oct' and 'End of next week' in the table.",
+    "Case 1: the unowned dbt macro check is marked UNASSIGNED with an open-question entry. The baseline wrote 'Unassigned' and 'Not named (Rahul presumably)', which guesses an owner.",
+    "Case 2: both runs passed everything; the unowned calendar-invite action was handled correctly even without the skill, so this edge case does not discriminate.",
+    "Case 3: the with-skill run did not invoke the skill and produced a clean agenda. The baseline agenda included decision/action content that tripped the no-action-table check."
+  ],
+  "does_not_help": [
+    "Case 1 check 1 failed with the skill: the validator rejected the UNASSIGNED row with a TBD due date, though the skill itself prescribes UNASSIGNED with no date. Fix: let the checker accept UNASSIGNED/TBD, or have the skill state the exact placeholder (for example 'UNASSIGNED | none').",
+    "Case 2 gave no uplift (3/3 in both configs). Fix: add a harder edge case, such as two owners on one action, a date with no month, or 'next Tuesday' relative dates.",
+    "Trigger eval: recall was 0 of 6 genuine requests, so the skill's gains only appear when it is forced to load. Fix the description (see description_review)."
+  ],
+  "case_notes": {
+    "1": "With skill: Confidential line, Open questions section, ISO dates and UNASSIGNED owner; the only failed check is the validator rejecting 'TBD' on the unowned row. Without: no confidentiality line, 'Open items' instead of Open questions, non-ISO dates and a guessed owner for the S3 task.",
+    "2": "With skill: decision recorded, Priya due 2026-10-31, calendar invite UNASSIGNED and listed in Open questions. Without: the same content in a differently named file; all checks pass in both.",
+    "3": "With skill: the skill stayed unused and a time-boxed agenda was written. Without: a valid agenda that also failed the 'no decisions or action-item table' check."
+  },
+  "check_categories": {
+    "1|minutes.md has Decisions, Action items and Open questions, and every action item has one owner and a YYYY-MM-DD due date": "org_knowledge",
+    "1|Rahul's hourly-refresh action is due 2026-10-09 and Meera's Power BI estimate is due 2026-10-16": "org_knowledge",
+    "1|A 'Confidential - internal distribution only' line appears because Victaulic is named": "org_knowledge",
+    "2|The calendar-invite action has owner UNASSIGNED and is also listed under Open questions": "org_knowledge"
+  },
+  "fix_suggestions": [
+    "Rewrite the description with more trigger phrases (see description_review) to fix recall: 'action items and owners', 'MoM', 'who agreed to do what', 'decisions and follow-ups', 'write up this call'.",
+    "State the exact placeholder for an unowned action in SKILL.md (owner UNASSIGNED, due 'none') and align minutes_format.py with it.",
+    "Say explicitly in SKILL.md that all due dates are ISO YYYY-MM-DD, resolved from the meeting date rather than today's date.",
+    "Add eval cases for the confidentiality rule when no external party is named (the line should be absent) to catch over-application.",
+    "Make the case 3 check specific to agenda-style output so a baseline agenda that mentions decisions is not penalised."
+  ],
+  "extra_limits": [
+    "One run per case per config and only 3 cases, so single-check differences (the check that separated the configs in case 1) could be noise.",
+    "Case 1's transcript is dated 6 Oct while the user said 'today'; the baseline dated minutes 6 Oct and asked about it. The with-skill run also dated minutes 2026-10-06.",
+    "Case 3's with-skill run did not invoke the skill, so it is effectively a second baseline run with the skill present.",
+    "Trigger eval ran only 3 runs per query, and the 12-query set had 0% recall."
+  ],
+  "description_review": {
+    "assessment": "too narrow",
+    "reason": "Trigger eval recall was 0% (0 of 6 positives triggered reliably); queries phrased as 'action items and owners', 'MoM', 'who agreed to do what' or 'decisions and follow-ups' never fired it. It does not overlap other repo skills, whose domains are commits, CSV, postmortems, PII and SQL.",
+    "overlaps_with": [],
+    "suggested_description": "Turns a meeting transcript, call recording transcript or rough notes into minutes.md in the team's standard format: attendees, decisions, action items with one named owner and an absolute YYYY-MM-DD due date, and open questions. Use this whenever the user gives meeting content (pasted or in a file) and asks for minutes, MoM, a write-up, a summary, decisions, follow-ups, action items, owners, or 'who agreed to do what' from a meeting, standup, call, steering committee, client review or Teams/Zoom transcript, even if they never say 'minutes'. Not for drafting agendas, emails to attendees, or summarising documents that are not meetings."
+  }
+}

@@ -1,0 +1,133 @@
+{
+  "overall": "KEEP",
+  "reason": "Still useful. On Sonnet 5.5 the skill raises the pass rate by +25 pts; 3 checks pass only with the skill. 8 checks pass with or without it.",
+  "decided_on": "claude-sonnet-5-5",
+  "outlook": [],
+  "trend_alerts": [],
+  "trend": {},
+  "models": [
+    {
+      "model": "claude-sonnet-5-5",
+      "with": {
+        "checks_passed": 11.0,
+        "checks_total": 12,
+        "pass_rate": 0.9166666666666666,
+        "cases_fully_passed": 2,
+        "cases_total": 3,
+        "tokens": 144429.0,
+        "seconds": 29.1
+      },
+      "without": {
+        "checks_passed": 8.0,
+        "checks_total": 12,
+        "pass_rate": 0.6666666666666666,
+        "cases_fully_passed": 1,
+        "cases_total": 3,
+        "tokens": 140416.0,
+        "seconds": 29.400000000000002
+      },
+      "uplift_pts": 25.0,
+      "verdict": "KEEP",
+      "unique": [
+        {
+          "case": 1,
+          "check": "The dbt 1.9 upgrade and Power BI support appear under Open questions, not under Decisions",
+          "category": "quality",
+          "with": 1,
+          "without": 0
+        },
+        {
+          "case": 1,
+          "check": "A 'Confidential - internal distribution only' line appears because Victaulic is named",
+          "category": "org_knowledge",
+          "with": 1,
+          "without": 0
+        },
+        {
+          "case": 3,
+          "check": "No minutes.md, decisions or action-item table is produced",
+          "category": "behavior",
+          "with": 1,
+          "without": 0
+        }
+      ],
+      "absorbed": [
+        {
+          "case": 1,
+          "check": "Rahul's hourly-refresh action is due 2026-10-09 and Meera's Power BI estimate is due 2026-10-16",
+          "category": "org_knowledge",
+          "with": 1,
+          "without": 1
+        },
+        {
+          "case": 1,
+          "check": "Retiring the old S3 bucket on 2026-10-31 is recorded as a decision",
+          "category": "quality",
+          "with": 1,
+          "without": 1
+        },
+        {
+          "case": 1,
+          "check": "No small talk (coffee joke, audio check) is included",
+          "category": "quality",
+          "with": 1,
+          "without": 1
+        },
+        {
+          "case": 2,
+          "check": "The calendar-invite action has owner UNASSIGNED and is also listed under Open questions",
+          "category": "org_knowledge",
+          "with": 1,
+          "without": 1
+        },
+        {
+          "case": 2,
+          "check": "Priya's Q3 numbers action is due 2026-10-31",
+          "category": "quality",
+          "with": 1,
+          "without": 1
+        },
+        {
+          "case": 2,
+          "check": "Moving standup to 10am is recorded as a decision",
+          "category": "quality",
+          "with": 1,
+          "without": 1
+        },
+        {
+          "case": 3,
+          "check": "The reply is an agenda with the three topics and time allocations adding up to about 45 minutes",
+          "category": "quality",
+          "with": 1,
+          "without": 1
+        },
+        {
+          "case": 3,
+          "check": "Skill not invoked (automatic check)",
+          "category": "behavior",
+          "with": 1,
+          "without": 1
+        }
+      ],
+      "harmful_checks": [],
+      "both_fail": [
+        {
+          "case": 1,
+          "check": "minutes.md has Decisions, Action items and Open questions, and every action item has one owner and a YYYY-MM-DD due date",
+          "category": "org_knowledge",
+          "with": 0,
+          "without": 0
+        }
+      ],
+      "harmful_cases": [],
+      "unique_by_category": {
+        "quality": 1,
+        "org_knowledge": 1,
+        "behavior": 1
+      },
+      "long_lived_share": 0.3333333333333333,
+      "token_overhead_pct": 2.8579364175022715,
+      "time_overhead_pct": -1.0204081632653073
+    }
+  ]
+}

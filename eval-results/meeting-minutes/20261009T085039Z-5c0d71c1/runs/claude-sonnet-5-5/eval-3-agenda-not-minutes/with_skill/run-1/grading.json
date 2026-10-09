@@ -1,0 +1,72 @@
+{
+  "expectations": [
+    {
+      "text": "The reply is an agenda with the three topics and time allocations adding up to about 45 minutes",
+      "passed": true,
+      "evidence": "Reply table and agenda.md list cost review (15), dbt upgrade (13), Power BI request (9) plus kick-off (5) and wrap-up (3) = 45 min, timeslots 0:00\u20130:45."
+    },
+    {
+      "text": "No minutes.md, decisions or action-item table is produced",
+      "passed": true,
+      "evidence": "Only agenda.md, final_response.md, metrics.json in outputs. No minutes.md; no action-item table. 'Decision:' bullets are prompts for discussion, not recorded decisions. skill_triggered false."
+    },
+    {
+      "text": "Skill not invoked (automatic check)",
+      "passed": true,
+      "evidence": "skill not loaded"
+    }
+  ],
+  "summary": {
+    "passed": 3,
+    "failed": 0,
+    "total": 3,
+    "pass_rate": 1.0
+  },
+  "execution_metrics": {
+    "tool_calls": {
+      "Write": 1
+    },
+    "total_tool_calls": 1,
+    "total_steps": 2,
+    "files_created": [
+      "agenda.md"
+    ],
+    "errors_encountered": 0,
+    "harness_error": false,
+    "harness_error_message": "",
+    "output_chars": 3196,
+    "transcript_chars": 4017,
+    "skill_triggered": false
+  },
+  "claims": [
+    {
+      "claim": "Agenda totals 45 minutes",
+      "type": "factual",
+      "verified": true,
+      "evidence": "5+15+13+9+3=45"
+    },
+    {
+      "claim": "Did not use the meeting-minutes skill",
+      "type": "process",
+      "verified": true,
+      "evidence": "metrics skill_triggered false; only a Write call"
+    }
+  ],
+  "user_notes_summary": {
+    "uncertainties": [],
+    "needs_review": [],
+    "workarounds": []
+  },
+  "eval_feedback": {
+    "suggestions": [
+      {
+        "assertion": "No minutes.md, decisions or action-item table is produced",
+        "reason": "Agenda includes 'Decision:' headings and an 'Outcome needed' column, which a naive check could confuse with decisions; make the assertion explicit that agenda prompts are fine, and check that no past-tense decisions are fabricated."
+      },
+      {
+        "reason": "Skill-trigger assertion is absent; this negative test could also check the skill was not invoked."
+      }
+    ],
+    "overall": "Assertions are reasonable but the first is loose about exact allocations."
+  }
+}

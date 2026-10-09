@@ -1,0 +1,52 @@
+[
+  {
+    "eval_id": 1,
+    "eval_name": "weekly-sync-minutes",
+    "prompt": "can you do the minutes from today's data platform sync? transcript is in inputs/transcript.txt. need to send them round this afternoon",
+    "expected_output": "minutes.md: 2 decisions (hourly refresh, retire S3 bucket on 2026-10-31), actions Rahul 2026-10-09 and Meera 2026-10-16, dbt and Power BI as open questions, confidential line",
+    "assertions": [
+      "minutes.md has Decisions, Action items and Open questions, and every action item has one owner and a YYYY-MM-DD due date",
+      "Rahul's hourly-refresh action is due 2026-10-09 and Meera's Power BI estimate is due 2026-10-16",
+      "The dbt 1.9 upgrade and Power BI support appear under Open questions, not under Decisions",
+      "Retiring the old S3 bucket on 2026-10-31 is recorded as a decision",
+      "A 'Confidential - internal distribution only' line appears because Victaulic is named",
+      "No small talk (coffee joke, audio check) is included"
+    ],
+    "type": "standard",
+    "description": "Minutes from a messy transcript",
+    "source": "evals/evals.json",
+    "files": [
+      "evals/files/transcript.txt"
+    ]
+  },
+  {
+    "eval_id": 2,
+    "eval_name": "unowned-action",
+    "prompt": "minutes please, meeting was Monday 2026-10-05: we agreed to move standup to 10am. someone needs to update the calendar invite but nobody volunteered. Priya will send the Q3 numbers end of month.",
+    "expected_output": "Calendar action UNASSIGNED and listed under open questions; Priya due 2026-10-31",
+    "assertions": [
+      "The calendar-invite action has owner UNASSIGNED and is also listed under Open questions",
+      "Priya's Q3 numbers action is due 2026-10-31",
+      "Moving standup to 10am is recorded as a decision"
+    ],
+    "type": "edge",
+    "description": "Action nobody took",
+    "source": "evals/evals.json",
+    "files": []
+  },
+  {
+    "eval_id": 3,
+    "eval_name": "agenda-not-minutes",
+    "prompt": "draft an agenda for next week's data platform sync: cost review, dbt upgrade, Power BI request. 45 minutes.",
+    "expected_output": "An agenda with timings, no minutes",
+    "assertions": [
+      "The reply is an agenda with the three topics and time allocations adding up to about 45 minutes",
+      "No minutes.md, decisions or action-item table is produced",
+      "Skill not invoked (automatic check)"
+    ],
+    "type": "should_not_trigger",
+    "description": "Draft an agenda (should not trigger)",
+    "source": "evals/evals.json",
+    "files": []
+  }
+]

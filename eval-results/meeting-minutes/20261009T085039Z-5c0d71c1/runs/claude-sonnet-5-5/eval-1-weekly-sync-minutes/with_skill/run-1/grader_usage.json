@@ -1,0 +1,9 @@
+{
+  "input": 6,
+  "output": 2169,
+  "cache_read": 56610,
+  "cache_write": 12959,
+  "cost_usd": 0.06542150000000001,
+  "calls": 1,
+  "total": 71744
+}

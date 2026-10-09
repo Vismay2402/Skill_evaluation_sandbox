@@ -1,0 +1,102 @@
+[
+  {
+    "stage": "Build",
+    "step": "Validate the skill",
+    "component": "scripts/quick_validate.py",
+    "result": "SKILL.md valid; description 412/1024 chars",
+    "status": "done"
+  },
+  {
+    "stage": "Eval",
+    "step": "1. Define test cases",
+    "component": "evals/evals.json (skill-creator schema)",
+    "result": "3 cases, 12 checks; types: edge, should_not_trigger, standard; source: evals/evals.json",
+    "status": "warn",
+    "note": "Skills 2.0 guidance: 5-10 cases including edge cases"
+  },
+  {
+    "stage": "Eval",
+    "step": "2. Run the eval (parallel, clean contexts)",
+    "component": "headless Claude Code, one isolated agent per run",
+    "result": "6 runs on Sonnet 5.5; up to 4 in parallel, each in an empty folder",
+    "status": "done"
+  },
+  {
+    "stage": "Eval",
+    "step": "Grade outputs",
+    "component": "agents/grader.md + check scripts",
+    "result": "pass rate Sonnet 5.5 92%; 1 failed check(s) with the skill",
+    "status": "done"
+  },
+  {
+    "stage": "Eval",
+    "step": "Metrics: response time and tokens per case",
+    "component": "scripts/aggregate_benchmark.py -> benchmark.json",
+    "result": "985,099 tokens metered in total, $0.76",
+    "status": "done"
+  },
+  {
+    "stage": "Eval",
+    "step": "3. Fix failures",
+    "component": "analyzer agent (agents/analyzer.md)",
+    "result": "5 fix suggestion(s), 3 weak spot(s) listed in the report",
+    "status": "done"
+  },
+  {
+    "stage": "Eval",
+    "step": "4. Re-run until the threshold is met",
+    "component": "target for a preference skill: 80%",
+    "result": "Sonnet 5.5 meets (92%)",
+    "status": "done",
+    "note": ""
+  },
+  {
+    "stage": "A/B benchmark",
+    "step": "Blind comparison vs without skill",
+    "component": "agents/comparator.md (blind A/B)",
+    "result": "win rate Sonnet 5.5 100% (KEEP)",
+    "status": "done"
+  },
+  {
+    "stage": "A/B benchmark",
+    "step": "Interpret: keep, refine or remove",
+    "component": "usefulness verdict (checks) + win rate",
+    "result": "KEEP",
+    "status": "done"
+  },
+  {
+    "stage": "Trigger optimization",
+    "step": "Test borderline prompts",
+    "component": "scripts/run_eval.py (trigger evals)",
+    "result": "6/12 correct, recall 0%, false triggers 0%",
+    "status": "done"
+  },
+  {
+    "stage": "Trigger optimization",
+    "step": "Diagnose and revise the description",
+    "component": "description review (analyzer)",
+    "result": "too narrow; rewrite suggested",
+    "status": "done"
+  },
+  {
+    "stage": "Review",
+    "step": "Inspect every output",
+    "component": "eval-viewer/generate_review.py",
+    "result": "review.html in the run artifact",
+    "status": "done"
+  },
+  {
+    "stage": "Maintain",
+    "step": "Version in git with results",
+    "component": "human gate -> eval-results/, history.json, registry",
+    "result": "skill version 5c0d71c15485; stored after approval",
+    "status": "pending"
+  },
+  {
+    "stage": "Maintain",
+    "step": "Re-benchmark",
+    "component": "daily scheduler (due / new model) + PR trigger",
+    "result": "next due 2026-11-08",
+    "status": "scheduled"
+  }
+]

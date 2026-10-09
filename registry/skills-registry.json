@@ -1,1 +1,32 @@
-{"skills": {}}
+{
+  "skills": {
+    "meeting-minutes": {
+      "approved_at": "2026-10-09T08:50:39.454901+00:00",
+      "approved_by": "Vismay2402",
+      "current_version": "5c0d71c154859235",
+      "description": "Turns a meeting transcript or rough notes into minutes.md in the team's standard format - attendees, decisions, action items with a named owner and an absolute due date, and open questions. Use this whenever someone asks for minutes, a meeting summary, MoM, action items or follow-ups from a call, transcript or notes. Not for drafting agendas, emails to attendees or summarising documents that are not meetings.",
+      "history": [
+        {
+          "approved_at": "2026-10-09T08:50:39.454901+00:00",
+          "approved_by": "Vismay2402",
+          "pass_rate": 0.9167,
+          "version": "5c0d71c154859235"
+        }
+      ],
+      "model": "claude-sonnet-5-5",
+      "pass_rate": 0.9167,
+      "results_path": "eval-results/meeting-minutes/20261009T085039Z-5c0d71c1",
+      "status": "approved",
+      "verdict": "KEEP",
+      "verdict_by_model": {
+        "claude-sonnet-5-5": {
+          "uplift_pts": 25.0,
+          "verdict": "KEEP",
+          "with": 0.9167,
+          "without": 0.6667
+        }
+      }
+    }
+  },
+  "updated_at": "2026-10-09T08:50:39.454901+00:00"
+}

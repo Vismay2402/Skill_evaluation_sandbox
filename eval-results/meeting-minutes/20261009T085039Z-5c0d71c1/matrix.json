@@ -1,0 +1,262 @@
+{
+  "models": [
+    "claude-sonnet-5-5"
+  ],
+  "configs": [
+    "with_skill",
+    "without_skill"
+  ],
+  "cases": [
+    {
+      "id": 1,
+      "name": "weekly-sync-minutes",
+      "description": "Minutes from a messy transcript",
+      "type": "standard",
+      "prompt": "can you do the minutes from today's data platform sync? transcript is in inputs/transcript.txt. need to send them round this afternoon",
+      "checks": [
+        {
+          "text": "minutes.md has Decisions, Action items and Open questions, and every action item has one owner and a YYYY-MM-DD due date",
+          "category": "org_knowledge",
+          "deterministic": true
+        },
+        {
+          "text": "Rahul's hourly-refresh action is due 2026-10-09 and Meera's Power BI estimate is due 2026-10-16",
+          "category": "org_knowledge",
+          "deterministic": false
+        },
+        {
+          "text": "The dbt 1.9 upgrade and Power BI support appear under Open questions, not under Decisions",
+          "category": "quality",
+          "deterministic": false
+        },
+        {
+          "text": "Retiring the old S3 bucket on 2026-10-31 is recorded as a decision",
+          "category": "quality",
+          "deterministic": false
+        },
+        {
+          "text": "A 'Confidential - internal distribution only' line appears because Victaulic is named",
+          "category": "org_knowledge",
+          "deterministic": false
+        },
+        {
+          "text": "No small talk (coffee joke, audio check) is included",
+          "category": "quality",
+          "deterministic": false
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "name": "unowned-action",
+      "description": "Action nobody took",
+      "type": "edge",
+      "prompt": "minutes please, meeting was Monday 2026-10-05: we agreed to move standup to 10am. someone needs to update the calendar invite but nobody volunteered. Priya will send the Q3 numbers end of month.",
+      "checks": [
+        {
+          "text": "The calendar-invite action has owner UNASSIGNED and is also listed under Open questions",
+          "category": "org_knowledge",
+          "deterministic": false
+        },
+        {
+          "text": "Priya's Q3 numbers action is due 2026-10-31",
+          "category": "quality",
+          "deterministic": false
+        },
+        {
+          "text": "Moving standup to 10am is recorded as a decision",
+          "category": "quality",
+          "deterministic": false
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "name": "agenda-not-minutes",
+      "description": "Draft an agenda (should not trigger)",
+      "type": "should_not_trigger",
+      "prompt": "draft an agenda for next week's data platform sync: cost review, dbt upgrade, Power BI request. 45 minutes.",
+      "checks": [
+        {
+          "text": "The reply is an agenda with the three topics and time allocations adding up to about 45 minutes",
+          "category": "quality",
+          "deterministic": false
+        },
+        {
+          "text": "No minutes.md, decisions or action-item table is produced",
+          "category": "behavior",
+          "deterministic": false
+        },
+        {
+          "text": "Skill not invoked (automatic check)",
+          "category": "behavior",
+          "deterministic": true
+        }
+      ]
+    }
+  ],
+  "results": {
+    "claude-sonnet-5-5": {
+      "with_skill": {
+        "1": [
+          {
+            "passed": [
+              false,
+              true,
+              true,
+              true,
+              true,
+              true
+            ],
+            "evidence": [
+              "[script evals/checks/minutes_format.py] problems: bad row: | 3 | Check the existing dbt macros for compatibility with dbt 1.9 | UNASSIGNED",
+              "minutes.md action table: Rahul 'Change the dashboard refresh to hourly' due 2026-10-09; Meera 'Write up the Power BI effort estimate' due 2026-10-16. Meeting Tue 2026-10-06, so Friday = 10-09 and end of next week = 10-16.",
+              "Open questions lists 'Upgrade to dbt 1.9?' and 'Add the churn report to Power BI...'. Decisions contains only the hourly refresh and S3 retirement.",
+              "Decisions item 2: 'The old S3 bucket will be retired on 2026-10-31 (previously agreed, reconfirmed).'",
+              "minutes.md line 2: 'Confidential - internal distribution only'; Victaulic is named in the attendees line, and the final response explains this.",
+              "No mention of the audio check or coffee in minutes.md. The final response mentions the coffee joke only to say it was left out."
+            ],
+            "tokens": 54943,
+            "seconds": 10.9,
+            "cost_usd": 0.0386029,
+            "skill_triggered": true,
+            "harness_error": false,
+            "files": [
+              "minutes.md"
+            ],
+            "final_response": "The minutes are in `outputs/minutes.md`, ready to send round.\n\n- **Decisions:** the dashboard refresh moves to hourly, and the old S3 bucket is retired on 2026-10-31.\n- **Action items:**\n  - Rahul changes the refresh to hourly by 2026-10-09 (this Friday).\n  - Meera writes the Power BI estimate by 2026-10-16 (end of next week).\n  - The dbt macro check has no owner, so I marked it `UNASSIGNED` with no due date. It's also in Open questions. Please assign it before sending.\n- **Open questions:** the dbt 1.9 upgrade is not decided until the macro check is done. Adding the churn report to Power BI is also undecided, pending Meera's estimate.\n- **Confidential line:** I added \"Confidential - internal distribution only\" because Tom is named as a Victaulic product owner. Remove it if you don't want it.\n- **Left out:** the coffee joke and small talk.\n- **Dates:** relative dates are worked out from the meeting date, Tuesday 2026-10-06.\n- **S3 bucket:** nobody was named to carry out the retirement, so I didn't create an action item for it. Add one if you want it tracked.",
+            "run_dir": "iteration/claude-sonnet-5-5/eval-1-weekly-sync-minutes/with_skill/run-1"
+          }
+        ],
+        "2": [
+          {
+            "passed": [
+              true,
+              true,
+              true
+            ],
+            "evidence": [
+              "minutes.md action row: '| 1 | Update the calendar invite for the new standup time | UNASSIGNED | - |' and Open questions: 'Who will update the calendar invite for the 10am standup? Nobody volunteered...'",
+              "minutes.md action row: '| 2 | Send the Q3 numbers | Priya | 2026-10-31 |'",
+              "minutes.md Decisions: '1. Standup moves to 10:00am.'"
+            ],
+            "tokens": 53032,
+            "seconds": 6.7,
+            "cost_usd": 0.0304153,
+            "skill_triggered": true,
+            "harness_error": false,
+            "files": [
+              "minutes.md"
+            ],
+            "final_response": "I wrote the minutes to `outputs/minutes.md`.\n\n- **Decision:** Standup moves to 10:00am.\n- **Action items:**\n  - Priya sends the Q3 numbers by 2026-10-31. I read \"end of month\" as the end of October, since the meeting was 2026-10-05.\n  - Updating the calendar invite is marked `UNASSIGNED` with no due date, because nobody volunteered. It is also listed under Open questions.\n- **Gaps:** You didn't give a meeting title or an attendee list. I used \"Team Meeting\" as the title and left attendees and absentees as \"not recorded\". Send me the names and a title and I'll fill them in.",
+            "run_dir": "iteration/claude-sonnet-5-5/eval-2-unowned-action/with_skill/run-1"
+          }
+        ],
+        "3": [
+          {
+            "passed": [
+              true,
+              true,
+              true
+            ],
+            "evidence": [
+              "Reply table and agenda.md list cost review (15), dbt upgrade (13), Power BI request (9) plus kick-off (5) and wrap-up (3) = 45 min, timeslots 0:00\u20130:45.",
+              "Only agenda.md, final_response.md, metrics.json in outputs. No minutes.md; no action-item table. 'Decision:' bullets are prompts for discussion, not recorded decisions. skill_triggered false.",
+              "skill not loaded"
+            ],
+            "tokens": 36454,
+            "seconds": 11.5,
+            "cost_usd": 0.0354621,
+            "skill_triggered": false,
+            "harness_error": false,
+            "files": [
+              "agenda.md"
+            ],
+            "final_response": "I've drafted the 45-minute agenda and saved it to `outputs/agenda.md`. I didn't use the meeting-minutes skill, since it covers minutes rather than agendas.\n\n| Time | Topic |\n|---|---|\n| 0:00\u20130:05 | Kick-off and review of last sync's actions |\n| 0:05\u20130:20 | Cost review (15 min): spend vs. budget, main drivers, quick wins. Decision on which optimisations to pursue. |\n| 0:20\u20130:33 | dbt upgrade (13 min): version gap, breaking changes, rollout and rollback plan, effort. Go/no-go and target date. |\n| 0:33\u20130:42 | Power BI request (9 min): business need, whether the data already exists, cost and licence impact. Accept, decline or defer. |\n| 0:42\u20130:45 | Wrap-up: decisions, owners and due dates read back |\n\nThe file also has pre-read suggestions for each item. The date, attendees, topic leads and facilitator are placeholders for you to fill in. I put the most time on the cost review because it's the broadest topic. Move minutes around if the Power BI request is more urgent.",
+            "run_dir": "iteration/claude-sonnet-5-5/eval-3-agenda-not-minutes/with_skill/run-1"
+          }
+        ]
+      },
+      "without_skill": {
+        "1": [
+          {
+            "passed": [
+              false,
+              true,
+              false,
+              true,
+              false,
+              true
+            ],
+            "evidence": [
+              "[script evals/checks/minutes_format.py] problems: ## Decisions; ## Action items; ## Open questions; bad row: | 1 | Change the dashboard refresh from 5 minutes to hourly | Rahul | Fri 9 Oct ; bad row: | 2 | Write up the Power BI effort estimate for the churn report | Meera | End o; bad row: | 3 | Check the dbt macros for compatibility with dbt 1.9 | **Unassigned** | TBC; bad row: | 4 | Retire the old S3 bucket | Not named (Rahul presumably) | 31 Oct 2026 |",
+              "Actions table: Rahul 'Fri 9 Oct 2026'; Meera 'End of next week (Fri 16 Oct 2026)'.",
+              "No 'Open questions' section; there is 'Open items' listing the dbt macro check (blocking the 1.9 decision) and Power BI undecided. But the dbt section is labelled '**Decision:** none today', and the dbt 1.9 upgrade itself is not listed as an open question. Partial, treated as fail.",
+              "'**Decision:** the old S3 bucket is retired on the 31st (October...)'; action due 31 Oct 2026.",
+              "minutes.md has no confidentiality line, although Victaulic is named in the Present list and item 1.",
+              "minutes.md contains neither the coffee joke nor the audio check."
+            ],
+            "tokens": 53407,
+            "seconds": 11.6,
+            "cost_usd": 0.0373784,
+            "skill_triggered": null,
+            "harness_error": false,
+            "files": [
+              "minutes.md"
+            ],
+            "final_response": "I've written the minutes and saved them to `outputs/minutes.md`. They cover the four agenda items, the decisions and a table of actions.\n\nCheck these before you send them round:\n- **Meeting date:** the transcript is dated Tuesday 6 Oct, not today (Fri 9 Oct). I dated the minutes 6 Oct, so tell me if you want that changed.\n- **dbt macro check:** nobody was assigned it. It's listed as unassigned and flagged as an open item, because it blocks the dbt 1.9 decision. You'll probably want to name someone first.\n- **Rahul's hourly refresh:** \"by this Friday\" is Fri 9 Oct, which is today. I took that as the due date.\n- **Meera's Power BI estimate:** \"end of next week\" is Fri 16 Oct. I left the Power BI request itself as undecided.\n- **S3 bucket:** the transcript says only \"the 31st\". I assumed 31 October. Rahul said \"fine\" but wasn't explicitly given the retirement task, so I marked the owner as \"Not named (Rahul presumably)\".\n- **Left out:** Anita's coffee joke. Sam is listed as an apology.",
+            "run_dir": "iteration/claude-sonnet-5-5/eval-1-weekly-sync-minutes/without_skill/run-1"
+          }
+        ],
+        "2": [
+          {
+            "passed": [
+              true,
+              true,
+              true
+            ],
+            "evidence": [
+              "Action table row 2: owner '**Unassigned** \u2014 nobody volunteered'; the 'Open Issues' section also lists 'Calendar invite update has no owner.' Heading is 'Open Issues' rather than 'Open questions' and the label is 'Unassigned' not literal 'UNASSIGNED', but the meaning is satisfied.",
+              "Row 1: 'Send Q3 numbers | Priya | End of month (2026-10-31)'. The response also states the month assumption.",
+              "'## Decisions - Daily standup moves to **10:00 AM**.'"
+            ],
+            "tokens": 34214,
+            "seconds": 5.0,
+            "cost_usd": 0.022416600000000002,
+            "skill_triggered": null,
+            "harness_error": false,
+            "files": [
+              "meeting-minutes-2026-10-05.md"
+            ],
+            "final_response": "Minutes saved to `./outputs/meeting-minutes-2026-10-05.md`.\n\n**Meeting minutes, Monday 2026-10-05**\n\n**Decision**\n- Standup moves to 10:00 AM.\n\n**Action items**\n- Priya will send the Q3 numbers by the end of the month (2026-10-31).\n- Updating the calendar invite has **no owner**, because nobody volunteered. I listed it as unassigned rather than picking someone.\n\n**Open issue**\n- Someone needs to be assigned the calendar invite update. If you tell me who, I'll update the minutes.\n\nI took \"end of month\" to mean 2026-10-31, since you didn't say which month.",
+            "run_dir": "iteration/claude-sonnet-5-5/eval-2-unowned-action/without_skill/run-1"
+          }
+        ],
+        "3": [
+          {
+            "passed": [
+              true,
+              false,
+              true
+            ],
+            "evidence": [
+              "Agenda table: 3+15+15+9+3 = 45 min, covering cost review, dbt upgrade, Power BI request, plus kickoff and wrap-up.",
+              "No minutes.md was created, but the agenda file includes an '## Action items' table (Action | Owner | Due) with an empty row, and the final reply mentions 'an empty action-items table'. Per-topic 'Decision:' bullets are agenda prompts, not recorded decisions.",
+              "skill not installed in this run"
+            ],
+            "tokens": 52795,
+            "seconds": 12.8,
+            "cost_usd": 0.0378049,
+            "skill_triggered": null,
+            "harness_error": false,
+            "files": [
+              "data-platform-sync-agenda.md"
+            ],
+            "final_response": "I drafted a 45-minute agenda for the data platform sync and saved it to `./outputs/data-platform-sync-agenda.md`. The date, facilitator, note-taker, attendees and topic leads are placeholders for you to fill in.\n\n| Time | Topic |\n|---|---|\n| 0:00\u20130:03 | Kickoff and review of open actions |\n| 0:03\u20130:18 | Cost review |\n| 0:18\u20130:33 | dbt upgrade |\n| 0:33\u20130:42 | Power BI request |\n| 0:42\u20130:45 | Wrap-up: decisions, actions and owners |\n\n- **Cost review:** spend against budget, top cost drivers and savings opportunities. It ends with a decision on which savings actions to commit to, with owners.\n- **dbt upgrade:** the current and target versions, readiness, the rollout plan and risks. It ends with a go/no-go, a timeline and an owner.\n- **Power BI request:** the business need, data requirements and cost or governance impact. It ends with a decision to accept, defer or decline.\n\nThe file also lists pre-reads and has an empty action-items table.\n\nI gave the Power BI request the shortest slot (9 minutes), assuming it is mostly a decision. If it needs more discussion, you could shift a few minutes from the cost review.",
+            "run_dir": "iteration/claude-sonnet-5-5/eval-3-agenda-not-minutes/without_skill/run-1"
+          }
+        ]
+      }
+    }
+  }
+}

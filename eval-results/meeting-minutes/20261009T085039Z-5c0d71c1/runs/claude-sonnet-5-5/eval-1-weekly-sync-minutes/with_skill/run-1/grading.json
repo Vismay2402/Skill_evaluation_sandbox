@@ -1,0 +1,97 @@
+{
+  "expectations": [
+    {
+      "text": "minutes.md has Decisions, Action items and Open questions, and every action item has one owner and a YYYY-MM-DD due date",
+      "passed": false,
+      "evidence": "[script evals/checks/minutes_format.py] problems: bad row: | 3 | Check the existing dbt macros for compatibility with dbt 1.9 | UNASSIGNED"
+    },
+    {
+      "text": "Rahul's hourly-refresh action is due 2026-10-09 and Meera's Power BI estimate is due 2026-10-16",
+      "passed": true,
+      "evidence": "minutes.md action table: Rahul 'Change the dashboard refresh to hourly' due 2026-10-09; Meera 'Write up the Power BI effort estimate' due 2026-10-16. Meeting Tue 2026-10-06, so Friday = 10-09 and end of next week = 10-16."
+    },
+    {
+      "text": "The dbt 1.9 upgrade and Power BI support appear under Open questions, not under Decisions",
+      "passed": true,
+      "evidence": "Open questions lists 'Upgrade to dbt 1.9?' and 'Add the churn report to Power BI...'. Decisions contains only the hourly refresh and S3 retirement."
+    },
+    {
+      "text": "Retiring the old S3 bucket on 2026-10-31 is recorded as a decision",
+      "passed": true,
+      "evidence": "Decisions item 2: 'The old S3 bucket will be retired on 2026-10-31 (previously agreed, reconfirmed).'"
+    },
+    {
+      "text": "A 'Confidential - internal distribution only' line appears because Victaulic is named",
+      "passed": true,
+      "evidence": "minutes.md line 2: 'Confidential - internal distribution only'; Victaulic is named in the attendees line, and the final response explains this."
+    },
+    {
+      "text": "No small talk (coffee joke, audio check) is included",
+      "passed": true,
+      "evidence": "No mention of the audio check or coffee in minutes.md. The final response mentions the coffee joke only to say it was left out."
+    }
+  ],
+  "summary": {
+    "passed": 5,
+    "failed": 1,
+    "total": 6,
+    "pass_rate": 0.8333
+  },
+  "execution_metrics": {
+    "tool_calls": {
+      "Skill": 1,
+      "Bash": 2
+    },
+    "total_tool_calls": 3,
+    "total_steps": 5,
+    "files_created": [
+      "minutes.md"
+    ],
+    "errors_encountered": 0,
+    "harness_error": false,
+    "harness_error_message": "",
+    "output_chars": 2098,
+    "transcript_chars": 4953,
+    "skill_triggered": true
+  },
+  "claims": [
+    {
+      "claim": "The dbt macro check has no owner, so it was marked UNASSIGNED",
+      "type": "factual",
+      "verified": true,
+      "evidence": "In the transcript Meera says 'Someone needs to check them' and nobody is assigned."
+    },
+    {
+      "claim": "No owner was named for the S3 retirement, so no action item was created",
+      "type": "process",
+      "verified": true,
+      "evidence": "Only Rahul says 'fine'; there is no assignment in the transcript."
+    },
+    {
+      "claim": "Hourly refresh is due 2026-10-09 (this Friday)",
+      "type": "factual",
+      "verified": true,
+      "evidence": "The meeting was on Tue 2026-10-06, so Friday is 10-09."
+    }
+  ],
+  "user_notes_summary": {
+    "uncertainties": [],
+    "needs_review": [
+      "dbt macro check is unassigned and needs an owner before sending"
+    ],
+    "workarounds": []
+  },
+  "eval_feedback": {
+    "suggestions": [
+      {
+        "assertion": "The dbt 1.9 upgrade and Power BI support appear under Open questions, not under Decisions",
+        "reason": "Add an assertion that the dbt macro-check action is UNASSIGNED rather than given to an invented owner. The transcript is built to trap that, and nothing checks it."
+      },
+      {
+        "assertion": "No small talk (coffee joke, audio check) is included",
+        "reason": "A grader could mistake the final chat response, which mentions the coffee joke, for a violation. Specify that the check applies to the minutes file only."
+      }
+    ],
+    "overall": "The assertions cover the main traps, but nothing checks the unassigned-owner handling or the absentee (Sam) listing."
+  }
+}

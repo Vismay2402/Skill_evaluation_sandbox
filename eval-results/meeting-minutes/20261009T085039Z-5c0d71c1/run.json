@@ -1,0 +1,41 @@
+{
+  "skill": "meeting-minutes",
+  "description": "Turns a meeting transcript or rough notes into minutes.md in the team's standard format - attendees, decisions, action items with a named owner and an absolute due date, and open questions. Use this whenever someone asks for minutes, a meeting summary, MoM, action items or follow-ups from a call, transcript or notes. Not for drafting agendas, emails to attendees or summarising documents that are not meetings.",
+  "skill_version": "5c0d71c154859235",
+  "baseline_version": null,
+  "executor": "claude-code",
+  "models": [
+    "claude-sonnet-5-5"
+  ],
+  "model": "claude-sonnet-5-5",
+  "grader_model": "claude-sonnet-5-5",
+  "configurations": [
+    "with_skill",
+    "without_skill"
+  ],
+  "evals": [
+    1,
+    2,
+    3
+  ],
+  "runs_per_config": 1,
+  "started_at": "2026-10-09T08:47:59.838944+00:00",
+  "finished_at": "2026-10-09T08:50:23.502029+00:00",
+  "gate_status": "pass",
+  "pass_rate": 0.9167,
+  "pass_rate_by_model": {
+    "claude-sonnet-5-5": 0.9167
+  },
+  "verdict": "KEEP",
+  "verdict_by_model": {
+    "claude-sonnet-5-5": "KEEP"
+  },
+  "cost_usd": 0.7615,
+  "tokens_total": 985099,
+  "test_case_source": [
+    "evals/evals.json"
+  ],
+  "win_rate_by_model": {
+    "claude-sonnet-5-5": 1.0
+  }
+}
