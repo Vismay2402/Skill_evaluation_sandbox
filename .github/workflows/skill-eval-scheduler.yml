@@ -85,7 +85,7 @@ jobs:
               python -m skilleval due --models "$ID" | grep -F "$ID" || echo "- none"
               echo
               echo "**Is each skill still needed on the new model?** Evaluate them against no skill:"
-              echo "[Run workflow]($EVAL_URL) → skills \`all\` → model \`other\` → model_other \`$ID\` (or \`claude-sonnet-5-5,$ID\` to compare) → baseline \`without_skill\`."
+              echo "[Run workflow]($EVAL_URL) → skill \`all\` → model \`other\` → model_other \`$ID\` (or \`claude-sonnet-5-5,$ID\` to compare) → baseline \`without_skill\`."
               echo
               echo "To make it a default model, add it to \`execution.models\` in \`skilleval.config.yaml\`; the scheduler then lists every skill not yet evaluated on it until it is."
             } > model_issue.md
@@ -117,7 +117,7 @@ jobs:
             if [ "${{ steps.cfg.outputs.auto_run }}" = "true" ] || [ "${{ inputs.run_due_now }}" = "true" ]; then
               echo "The scheduler started an evaluation for: \`$NAMES\`. Approve the results in the run's **human-review** step."
             else
-              echo "**To evaluate:** [Run workflow]($EVAL_URL) → skills \`$NAMES\` → baseline \`without_skill\`."
+              echo "**To evaluate:** [Run workflow]($EVAL_URL) → skill \`several (type below)\` → skills_other \`$NAMES\` → baseline \`without_skill\` (or pick one skill from the dropdown)."
               echo "Set \`schedule.auto_run: true\` in skilleval.config.yaml to start these automatically."
             fi
           } > due_issue.md
@@ -134,7 +134,7 @@ jobs:
         if: steps.due.outputs.names != '' && (steps.cfg.outputs.auto_run == 'true' || inputs.run_due_now)
         run: |
           gh workflow run skill-eval.yml --ref "${{ github.ref_name }}" \
-            -f skills="${{ steps.due.outputs.names }}" -f baseline=without_skill -f runs_per_config=1
+            -f skill="several (type below)" -f skills_other="${{ steps.due.outputs.names }}" -f baseline=without_skill -f runs_per_config=1
           echo "Started Skill evaluation for: ${{ steps.due.outputs.names }}" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Evaluate skills on newly released models
@@ -142,7 +142,7 @@ jobs:
         run: |
           NAMES=$(python -m skilleval due --models "${{ steps.models.outputs.ids }}" --names --limit ${{ steps.cfg.outputs.limit }})
           [ -z "$NAMES" ] && exit 0
-          gh workflow run skill-eval.yml --ref "${{ github.ref_name }}" -f skills="$NAMES" \
+          gh workflow run skill-eval.yml --ref "${{ github.ref_name }}" -f skill="several (type below)" -f skills_other="$NAMES" \
             -f model="other (type below)" -f model_other="${{ steps.models.outputs.ids }}" \
             -f baseline=without_skill -f runs_per_config=1
           echo "Started Skill evaluation on ${{ steps.models.outputs.ids }} for: $NAMES" >> "$GITHUB_STEP_SUMMARY"

@@ -285,6 +285,38 @@ def cmd_models_check(args, cfg):
           ("\n".join(f"{m['id']}  ({m['name']}, released {m['released']})" for m in items) or "No new models."))
 
 
+WORKFLOW = REPO_ROOT / ".github" / "workflows" / "skill-eval.yml"
+BEGIN, END = "# BEGIN skill-options", "# END skill-options"
+
+
+def cmd_sync_workflow(args, cfg):
+    """Regenerate the skill dropdown in the Run workflow form from the folders under skills/."""
+    skills_dir, _, _ = _paths(cfg)
+    names = all_skills(skills_dir)
+    lines = WORKFLOW.read_text().splitlines(keepends=True)
+    try:
+        b = next(i for i, l in enumerate(lines) if l.strip().startswith(BEGIN))
+        e = next(i for i, l in enumerate(lines) if l.strip().startswith(END))
+    except StopIteration:
+        sys.exit(f"markers '{BEGIN}' / '{END}' not found in {WORKFLOW}")
+    indent = lines[b][: len(lines[b]) - len(lines[b].lstrip())]
+    new = lines[: b + 1] + [f"{indent}- {n}\n" for n in names] + lines[e:]
+    text = "".join(new)
+    # keep the default valid: first skill in the list
+    import re as _re
+    text = _re.sub(r"(\n\s*default: )\S+(\n\s*skills_other:)", lambda m: m.group(1) + (names[0] if names else "all")
+                   + m.group(2), text, count=1)
+    if args.check:
+        if text != WORKFLOW.read_text():
+            print("The skill dropdown in .github/workflows/skill-eval.yml is out of date. Run:\n"
+                  "  python -m skilleval sync-workflow\nand commit the result.")
+            sys.exit(1)
+        print(f"dropdown lists all {len(names)} skills")
+        return
+    WORKFLOW.write_text(text)
+    print(f"dropdown now lists {len(names)} skills: {', '.join(names)}")
+
+
 def main():
     p = argparse.ArgumentParser(prog="skilleval")
     p.add_argument("--config", default=None)
@@ -327,6 +359,8 @@ def main():
     du.add_argument("--limit", type=int, default=0)
     mc = sub.add_parser("models-check", help="Claude models released since schedule.models_known_before")
     mc.add_argument("--since"); mc.add_argument("--json", action="store_true")
+    sw = sub.add_parser("sync-workflow", help="regenerate the skill dropdown in the Run workflow form")
+    sw.add_argument("--check", action="store_true", help="fail if the dropdown is out of date")
     pb = sub.add_parser("publish")
     pb.add_argument("--workspace", default="skilleval-workspace")
     pb.add_argument("--approver", required=True); pb.add_argument("--note"); pb.add_argument("--run-url")
@@ -336,7 +370,7 @@ def main():
     cfg = load_config(config_path=Path(args.config) if args.config else None)
     {"list": cmd_list, "changed": cmd_changed, "validate": cmd_validate, "draft-evals": cmd_draft_evals,
      "run": cmd_run, "publish": cmd_publish, "import-cases": cmd_import_cases,
-     "due": cmd_due, "models-check": cmd_models_check, "verify": cmd_verify,
+     "due": cmd_due, "sync-workflow": cmd_sync_workflow, "models-check": cmd_models_check, "verify": cmd_verify,
      "changes": cmd_changes}[args.cmd](args, cfg)
 
 

@@ -1,0 +1,14 @@
+[
+  {"query": "anonymise this customer csv before I upload it to the vendor portal", "should_trigger": true},
+  {"query": "mask the phone numbers and emails in these chat logs", "should_trigger": true},
+  {"query": "scrub personal data from the attached support export so I can paste it into chatgpt", "should_trigger": true},
+  {"query": "remove PII from this file - names, aadhaar, PAN etc", "should_trigger": true},
+  {"query": "can you sanitise this log file? it has customer emails in it", "should_trigger": true},
+  {"query": "make this dataset safe to share externally", "should_trigger": true},
+  {"query": "extract all email addresses from this csv into a list", "should_trigger": false},
+  {"query": "encrypt this excel file with a password", "should_trigger": false},
+  {"query": "what counts as personal data under India's DPDP act?", "should_trigger": false},
+  {"query": "dedupe the customers in this csv by email", "should_trigger": false},
+  {"query": "validate that the PAN numbers in this file are in the right format", "should_trigger": false},
+  {"query": "write a regex that matches indian phone numbers", "should_trigger": false}
+]

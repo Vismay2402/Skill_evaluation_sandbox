@@ -1,0 +1,16 @@
+Meeting: Data platform weekly sync - Tuesday 2026-10-06 (transcript, auto-generated)
+Present: Anita (eng manager), Rahul (data engineer), Meera (analyst), Tom (Victaulic product owner). Sam could not join.
+
+Anita: can everyone hear me? ok great. First item, the Snowflake cost spike.
+Rahul: it was the new dashboard refreshing every 5 minutes. I'd like to move it to hourly.
+Tom: hourly is fine for us.
+Anita: ok, agreed, hourly refresh from now on. Rahul can you make that change by Friday?
+Rahul: yes, by this Friday.
+Anita: second, the dbt upgrade. Meera?
+Meera: we should go to dbt 1.9 but I'm not sure about the macros. Someone needs to check them.
+Anita: let's not decide today, we need the macro check first.
+Tom: also, can we get the churn report in Power BI as well as Tableau?
+Anita: not sure we have capacity. Let's think about it.
+Meera: I'll write up the Power BI effort estimate by end of next week.
+Anita: haha, and someone owes me coffee. Ok last: we agreed last month to retire the old S3 bucket - confirmed, we retire it on the 31st.
+Rahul: fine.

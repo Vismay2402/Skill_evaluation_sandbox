@@ -12,7 +12,7 @@ test prompts, objective checks, and a comparison **with vs without** the skill.
 
    | Field | What to choose |
    |---|---|
-   | **skills** | folder names, comma-separated (`incident-postmortem,snowflake-sql-review`) or `all` |
+   | **skill** | pick one skill from the dropdown, `all`, or `several (type below)` and list them in **skills_other** (`incident-postmortem,snowflake-sql-review`) |
    | **model** | default **claude-sonnet-5-5**. Pick a combination (e.g. `claude-haiku-5-5,claude-sonnet-5-5`) to see if the skill matters less on stronger models, or `other` + **model_other** for a model not in the list (e.g. one released yesterday) |
    | **grader_model** | default Sonnet 5.5; choose Opus 5.5 for high-stakes approvals |
    | **runs_per_config** | `1` while trying things, `3` for an approval you want to rely on |

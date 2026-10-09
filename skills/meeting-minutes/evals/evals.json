@@ -1,0 +1,47 @@
+{
+  "skill_name": "meeting-minutes",
+  "evals": [
+    {
+      "id": 1,
+      "name": "weekly-sync-minutes",
+      "type": "standard",
+      "description": "Minutes from a messy transcript",
+      "prompt": "can you do the minutes from today's data platform sync? transcript is in inputs/transcript.txt. need to send them round this afternoon",
+      "expected_output": "minutes.md: 2 decisions (hourly refresh, retire S3 bucket on 2026-10-31), actions Rahul 2026-10-09 and Meera 2026-10-16, dbt and Power BI as open questions, confidential line",
+      "files": ["evals/files/transcript.txt"],
+      "expectations": [
+        {"text": "minutes.md has Decisions, Action items and Open questions, and every action item has one owner and a YYYY-MM-DD due date", "script": "evals/checks/minutes_format.py", "category": "org_knowledge"},
+        {"text": "Rahul's hourly-refresh action is due 2026-10-09 and Meera's Power BI estimate is due 2026-10-16", "category": "org_knowledge"},
+        {"text": "The dbt 1.9 upgrade and Power BI support appear under Open questions, not under Decisions", "category": "quality"},
+        {"text": "Retiring the old S3 bucket on 2026-10-31 is recorded as a decision", "category": "quality"},
+        {"text": "A 'Confidential - internal distribution only' line appears because Victaulic is named", "category": "org_knowledge"},
+        {"text": "No small talk (coffee joke, audio check) is included", "category": "quality"}
+      ]
+    },
+    {
+      "id": 2,
+      "name": "unowned-action",
+      "type": "edge",
+      "description": "Action nobody took",
+      "prompt": "minutes please, meeting was Monday 2026-10-05: we agreed to move standup to 10am. someone needs to update the calendar invite but nobody volunteered. Priya will send the Q3 numbers end of month.",
+      "expected_output": "Calendar action UNASSIGNED and listed under open questions; Priya due 2026-10-31",
+      "expectations": [
+        {"text": "The calendar-invite action has owner UNASSIGNED and is also listed under Open questions", "category": "org_knowledge"},
+        {"text": "Priya's Q3 numbers action is due 2026-10-31", "category": "quality"},
+        {"text": "Moving standup to 10am is recorded as a decision", "category": "quality"}
+      ]
+    },
+    {
+      "id": 3,
+      "name": "agenda-not-minutes",
+      "type": "should_not_trigger",
+      "description": "Draft an agenda (should not trigger)",
+      "prompt": "draft an agenda for next week's data platform sync: cost review, dbt upgrade, Power BI request. 45 minutes.",
+      "expected_output": "An agenda with timings, no minutes",
+      "expectations": [
+        {"text": "The reply is an agenda with the three topics and time allocations adding up to about 45 minutes", "category": "quality"},
+        {"text": "No minutes.md, decisions or action-item table is produced", "category": "behavior"}
+      ]
+    }
+  ]
+}

@@ -1,0 +1,14 @@
+[
+  {"query": "write up the minutes from this call transcript", "should_trigger": true},
+  {"query": "can you pull out the action items and owners from my meeting notes below", "should_trigger": true},
+  {"query": "MoM for today's client review please, notes attached", "should_trigger": true},
+  {"query": "summarise this teams meeting recording transcript into decisions and follow-ups", "should_trigger": true},
+  {"query": "turn these scribbled notes from the steering committee into proper minutes", "should_trigger": true},
+  {"query": "who agreed to do what in yesterday's standup? here's the transcript", "should_trigger": true},
+  {"query": "draft an agenda for monday's planning meeting", "should_trigger": false},
+  {"query": "write an email inviting the team to the quarterly review", "should_trigger": false},
+  {"query": "summarise this 40 page PDF report", "should_trigger": false},
+  {"query": "find a 30 minute slot next week when Anita and Rahul are both free", "should_trigger": false},
+  {"query": "how do I run more effective meetings?", "should_trigger": false},
+  {"query": "turn this transcript of a podcast interview into a blog post", "should_trigger": false}
+]

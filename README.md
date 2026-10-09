@@ -183,6 +183,13 @@ skill-creator schema. Templates and details: [test-cases/](test-cases/README.md)
 | `incident-postmortem` | Blameless postmortem in a house format with an org SEV scale | Bundled template + org rules: value models cannot learn |
 | `snowflake-sql-review` | Reviews SQL against org rules (critical skill, 90% target) | Safety checks (blocks destructive prod SQL) |
 | `conventional-commits` | Conventional Commits messages | Almost entirely generic: a likely retire candidate on strong models |
+| `meeting-minutes` | Minutes with decisions, owned and dated action items | Team format rules (absolute dates, UNASSIGNED owners, confidentiality line) |
+| `pii-redactor` | Redacts personal data (incl. Aadhaar / PAN) before sharing, logs counts only | Safety: leaks are checked by a script |
+
+**Adding a skill:** create `skills/<name>/SKILL.md` (+ `evals/`), then run `python -m skilleval sync-workflow`
+so it appears in the Run workflow dropdown, and commit both. The *Skill approval check* fails on pull requests
+whose dropdown is out of date, so it cannot be forgotten. (GitHub's dropdowns are static, and the default
+`GITHUB_TOKEN` is not allowed to edit workflow files, which is why this is a command rather than automatic.)
 
 ## Repo layout
 
@@ -233,8 +240,8 @@ skilleval.config.yaml                   models, runs, schedule, gate thresholds,
   **Review deployments → Approve** (add a comment - it's stored as the approval note) or **Reject**.
 - On approval the results commit lands in the same PR, so the skill and its evidence merge together.
 
-**Re-evaluate any skill (a few clicks)** - Actions → *Skill evaluation* → *Run workflow*: enter skill names
-or `all`, pick the **model** from the dropdown (default **Sonnet 5.5**; combinations or `other` for any model
+**Re-evaluate any skill (a few clicks)** - Actions → *Skill evaluation* → *Run workflow*: pick the **skill**
+from the dropdown (or `all`, or `several` + names), pick the **model** from the dropdown (default **Sonnet 5.5**; combinations or `other` for any model
 id), the **grader model**, runs, baseline (`without_skill` for a usefulness verdict), and optionally paste
 your own **test cases**. Approved results arrive as a PR. Step-by-step (and how to evaluate without any
 automation): [docs/MANUAL_EVALUATION.md](docs/MANUAL_EVALUATION.md).

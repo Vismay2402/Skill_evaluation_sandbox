@@ -18,3 +18,5 @@ jobs:
       - run: pip install -r requirements.txt
       - name: Every changed skill has an approved evaluation for its current version
         run: python -m skilleval verify --changed origin/${{ github.base_ref }}
+      - name: Run workflow dropdown lists every skill
+        run: python -m skilleval sync-workflow --check

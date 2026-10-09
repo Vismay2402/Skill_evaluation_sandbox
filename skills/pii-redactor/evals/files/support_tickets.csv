@@ -1,0 +1,5 @@
+ticket_id,created,customer_name,email,phone,city,agent,notes,amount
+T-1001,2026-09-01,Rohan Mehta,rohan.mehta@example.com,+91 98765 43210,Indore,EMP-2231,"Customer asked for refund, card 4111 1111 1111 1111 charged twice",1499
+T-1002,2026-09-02,Ana Silva,ana.silva@example.org,(555) 201-3344,Pune,EMP-2231,Wants invoice sent to ana.s@work-example.com,899
+T-1003,2026-09-03,Vikram Rao,vrao@example.net,9876501234,Bhopal,EMP-1180,"KYC: PAN ABCPR1234K, Aadhaar 1234 5678 9012 provided over chat",0
+T-1004,2026-09-04,Acme Pipes Ltd,orders@acme-pipes.example,+91-731-4000000,Indore,EMP-1180,Bulk order delayed - call Mr. Sharma back,25000
