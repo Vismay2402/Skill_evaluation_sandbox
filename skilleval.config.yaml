@@ -60,6 +60,8 @@ gate:
   min_delta_vs_baseline: 0.0      # new skill must not score below its baseline
   max_regression_vs_last_approved: 0.05  # vs. the last approved result in eval-results/
   min_trigger_accuracy: 0.80      # only applied when trigger evals ran
+  trigger_accuracy_blocks: false  # false = low triggering is a warning (shown with a suggested description),
+                                  # true = it blocks human review like the checks above
   max_error_runs: 0               # runs where claude -p crashed / timed out
   # Soft checks only produce warnings in the report
   warn_stddev_above: 0.20         # flaky evals

@@ -304,6 +304,10 @@ def render_summary(m: dict, matrix: dict, dec: dict, gate: dict, trigger: dict |
              "<sub>Evaluated with the **Skills 2.0** eval & benchmark tooling from Anthropic's skill-creator "
              "(evals.json, grader / comparator / analyzer agents, aggregate_benchmark, run_eval, eval viewer).</sub>",
              "", f"> {dec['reason']}", "",
+             *(["**❌ Why the automated gate failed** (results are not sent to human review unless the run "
+                "is started with *allow_failed_gate*):", ""] + [f"- {f}" for f in gate.get("failed", [])] + [""]
+               if gate.get("failed") else []),
+             *(["**⚠️ Warnings:** " + " · ".join(gate["warned"]), ""] if gate.get("warned") else []),
              *([f"**Run errors:** " + "; ".join(f"`{e}`" for e in dec["harness_errors"]), ""]
                if dec.get("harness_errors") else [])]
     pr = x.get("profile")

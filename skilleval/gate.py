@@ -88,14 +88,46 @@ def evaluate_gate(benchmarks: dict[str, dict], trigger: dict | None, last_approv
                   round(-reg, 4), f">= -{g['max_regression_vs_last_approved']}")
     if trigger:
         acc = trigger["summary"]["accuracy"]
-        check("trigger_accuracy", acc >= g["min_trigger_accuracy"], acc, g["min_trigger_accuracy"])
+        # Triggering is about the description, not what the skill does once loaded: by default it is
+        # reported (with a suggested rewrite) but does not block human review.
+        check("trigger_accuracy", acc >= g["min_trigger_accuracy"], acc, g["min_trigger_accuracy"],
+              hard=bool(g.get("trigger_accuracy_blocks", False)))
     elif cfg["trigger_eval"]["enabled"]:
         check("trigger_evals_present", False, "none", "evals/trigger_evals.json", hard=False)
 
     status = "fail" if any(c["status"] == "fail" for c in checks) else "pass"
+    failed = [c for c in checks if c["status"] == "fail"]
     first = next(iter(benchmarks))
     return {"status": status, "pass_rate": round(primary_rates.get(first, 0.0), 4),
-            "pass_rate_by_model": {m: round(v, 4) for m, v in primary_rates.items()}, "checks": checks}
+            "pass_rate_by_model": {m: round(v, 4) for m, v in primary_rates.items()}, "checks": checks,
+            "failed": [explain(c) for c in failed],
+            "warned": [explain(c) for c in checks if c["status"] == "warn"]}
+
+
+EXPLAIN = {
+    "pass_rate": "with-skill pass rate {value:.0%} is below the {threshold:.0%} minimum - see 'Specific failures' "
+                 "for the checks it missed",
+    "delta_vs": "the skill scores {value:+.0%} vs the baseline (minimum {threshold:+.0%}) - it is making answers worse",
+    "harness_errors": "{value} run(s) crashed or timed out",
+    "regression_vs_last_approved": "pass rate dropped {value:+.0%} vs the last approved evaluation",
+    "trigger_accuracy": "description triggering {value:.0%} is below {threshold:.0%} - see 'Trigger optimization' "
+                        "for the misfires and a suggested description",
+    "has_assertions": "no checks to grade",
+}
+
+
+def explain(c: dict) -> str:
+    key = next((k for k in EXPLAIN if c["name"].startswith(k)), None)
+    tag = c["name"][c["name"].find("["):] if "[" in c["name"] else ""
+    try:
+        thr = float(str(c["threshold"]).replace(">=", "").replace(">", "").strip())
+    except ValueError:
+        thr = 0.0
+    try:
+        msg = EXPLAIN[key].format(value=c["value"], threshold=thr) if key else f"{c['value']} vs {c['threshold']}"
+    except (ValueError, TypeError):
+        msg = f"{c['value']} vs {c['threshold']}"
+    return f"{c['name'].split(' [')[0]}{(' ' + tag) if tag else ''}: {msg}"
 
 
 def load_last_approved(results_dir: Path, skill: str) -> dict | None:

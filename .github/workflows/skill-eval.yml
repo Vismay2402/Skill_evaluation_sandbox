@@ -76,7 +76,7 @@ on:
         type: boolean
         default: true
       allow_failed_gate:
-        description: Send to human review even if the automated gate fails
+        description: Send to human review even if the automated gate fails (the reviewer sees why it failed)
         type: boolean
         default: false
       test_cases:
@@ -300,15 +300,29 @@ jobs:
           gh pr comment ${{ github.event.pull_request.number }} --body-file comment.md --edit-last --create-if-none \
             || gh pr comment ${{ github.event.pull_request.number }} --body-file comment.md
 
-      - name: Stop if the automated gate failed
-        if: steps.run.outputs.gate_failed == 'true' && github.event_name != 'schedule' && !(github.event_name == 'workflow_dispatch' && inputs.allow_failed_gate)
+      - name: Explain the automated gate
+        if: steps.run.outputs.gate_failed == 'true'
         run: |
-          echo "::error::Automated quality gate failed - see the summary. Fix the skill or evals and push again, or re-run manually with allow_failed_gate."
-          exit 1
+          # Print each failed check as an annotation, so the reason is visible on the run page.
+          python - <<'PY'
+          import json, pathlib
+          ws = pathlib.Path("${{ env.WORKSPACE }}")
+          for g in sorted(ws.glob("*/gate.json")):
+              for f in json.loads(g.read_text()).get("failed", []):
+                  print(f"::warning title=Gate failed - {g.parent.name}::{f}")
+          PY
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            echo "::error::Automated quality gate failed (reasons above and in the summary). Fix the skill or its evals and push again."
+            exit 1
+          elif [ "${{ inputs.allow_failed_gate }}" = "true" ]; then
+            echo "::notice::Gate failed but allow_failed_gate is set - sending the results to human review anyway."
+          else
+            echo "::notice::The evaluation completed; its results did not meet the gate, so human review is skipped. To review and store them anyway, re-run with allow_failed_gate ticked."
+          fi
 
   human-review:
     needs: evaluate
-    if: needs.evaluate.outputs.has_results == 'true'
+    if: needs.evaluate.outputs.has_results == 'true' && (needs.evaluate.outputs.gate_failed != 'true' || inputs.allow_failed_gate)
     runs-on: ubuntu-latest
     # The human gate: configure this environment with "Required reviewers"
     # (Settings -> Environments -> skill-eval-approval). The job waits until a reviewer approves.
