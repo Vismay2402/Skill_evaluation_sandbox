@@ -1,0 +1,1325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Eval Review</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600&family=Lora:wght@400;500&display=swap" rel="stylesheet">
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js" integrity="sha384-EnyY0/GSHQGSxSgMwaIPzSESbqoOLSexfnSMN2AP+39Ckmn92stwABZynq1JyzdT" crossorigin="anonymous"></script>
+  <style>
+    :root {
+      --bg: #faf9f5;
+      --surface: #ffffff;
+      --border: #e8e6dc;
+      --text: #141413;
+      --text-muted: #b0aea5;
+      --accent: #d97757;
+      --accent-hover: #c4613f;
+      --green: #788c5d;
+      --green-bg: #eef2e8;
+      --red: #c44;
+      --red-bg: #fceaea;
+      --header-bg: #141413;
+      --header-text: #faf9f5;
+      --radius: 6px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Lora', Georgia, serif;
+      background: var(--bg);
+      color: var(--text);
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ---- Header ---- */
+    .header {
+      background: var(--header-bg);
+      color: var(--header-text);
+      padding: 1rem 2rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-shrink: 0;
+    }
+    .header h1 {
+      font-family: 'Poppins', sans-serif;
+      font-size: 1.25rem;
+      font-weight: 600;
+    }
+    .header .instructions {
+      font-size: 0.8rem;
+      opacity: 0.7;
+      margin-top: 0.25rem;
+    }
+    .header .progress {
+      font-size: 0.875rem;
+      opacity: 0.8;
+      text-align: right;
+    }
+
+    /* ---- Main content ---- */
+    .main {
+      flex: 1;
+      overflow-y: auto;
+      padding: 1.5rem 2rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1.25rem;
+    }
+
+    /* ---- Sections ---- */
+    .section {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      flex-shrink: 0;
+    }
+    .section-header {
+      font-family: 'Poppins', sans-serif;
+      padding: 0.75rem 1rem;
+      font-size: 0.75rem;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+      border-bottom: 1px solid var(--border);
+      background: var(--bg);
+    }
+    .section-body {
+      padding: 1rem;
+    }
+
+    /* ---- Config badge ---- */
+    .config-badge {
+      display: inline-block;
+      padding: 0.2rem 0.625rem;
+      border-radius: 9999px;
+      font-family: 'Poppins', sans-serif;
+      font-size: 0.6875rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+      margin-left: 0.75rem;
+      vertical-align: middle;
+    }
+    .config-badge.config-primary {
+      background: rgba(33, 150, 243, 0.12);
+      color: #1976d2;
+    }
+    .config-badge.config-baseline {
+      background: rgba(255, 193, 7, 0.15);
+      color: #f57f17;
+    }
+
+    /* ---- Prompt ---- */
+    .prompt-text {
+      white-space: pre-wrap;
+      font-size: 0.9375rem;
+      line-height: 1.6;
+    }
+
+    /* ---- Outputs ---- */
+    .output-file {
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+    .output-file + .output-file {
+      margin-top: 1rem;
+    }
+    .output-file-header {
+      padding: 0.5rem 0.75rem;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      background: var(--bg);
+      border-bottom: 1px solid var(--border);
+      font-family: 'SF Mono', SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .output-file-header .dl-btn {
+      font-size: 0.7rem;
+      color: var(--accent);
+      text-decoration: none;
+      cursor: pointer;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      font-weight: 500;
+      opacity: 0.8;
+    }
+    .output-file-header .dl-btn:hover {
+      opacity: 1;
+      text-decoration: underline;
+    }
+    .output-file-content {
+      padding: 0.75rem;
+      overflow-x: auto;
+    }
+    .output-file-content pre {
+      font-size: 0.8125rem;
+      line-height: 1.5;
+      white-space: pre-wrap;
+      word-break: break-word;
+      font-family: 'SF Mono', SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace;
+    }
+    .output-file-content img {
+      max-width: 100%;
+      height: auto;
+      border-radius: 4px;
+    }
+    .output-file-content iframe {
+      width: 100%;
+      height: 600px;
+      border: none;
+    }
+    .output-file-content table {
+      border-collapse: collapse;
+      font-size: 0.8125rem;
+      width: 100%;
+    }
+    .output-file-content table td,
+    .output-file-content table th {
+      border: 1px solid var(--border);
+      padding: 0.375rem 0.5rem;
+      text-align: left;
+    }
+    .output-file-content table th {
+      background: var(--bg);
+      font-weight: 600;
+    }
+    .output-file-content .download-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.5rem 1rem;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      color: var(--accent);
+      text-decoration: none;
+      font-size: 0.875rem;
+      cursor: pointer;
+    }
+    .output-file-content .download-link:hover {
+      background: var(--border);
+    }
+    .empty-state {
+      color: var(--text-muted);
+      font-style: italic;
+      padding: 2rem;
+      text-align: center;
+    }
+
+    /* ---- Feedback ---- */
+    .prev-feedback {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 0.625rem 0.75rem;
+      margin-top: 0.75rem;
+      font-size: 0.8125rem;
+      color: var(--text-muted);
+      line-height: 1.5;
+    }
+    .prev-feedback-label {
+      font-size: 0.7rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      margin-bottom: 0.25rem;
+      color: var(--text-muted);
+    }
+    .feedback-textarea {
+      width: 100%;
+      min-height: 100px;
+      padding: 0.75rem;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      font-family: inherit;
+      font-size: 0.9375rem;
+      line-height: 1.5;
+      resize: vertical;
+      color: var(--text);
+    }
+    .feedback-textarea:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+    }
+    .feedback-status {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      margin-top: 0.5rem;
+      min-height: 1.1em;
+    }
+
+    /* ---- Grades (collapsible) ---- */
+    .grades-toggle {
+      display: flex;
+      align-items: center;
+      cursor: pointer;
+      user-select: none;
+    }
+    .grades-toggle:hover {
+      color: var(--accent);
+    }
+    .grades-toggle .arrow {
+      margin-right: 0.5rem;
+      transition: transform 0.15s;
+      font-size: 0.75rem;
+    }
+    .grades-toggle .arrow.open {
+      transform: rotate(90deg);
+    }
+    .grades-content {
+      display: none;
+      margin-top: 0.75rem;
+    }
+    .grades-content.open {
+      display: block;
+    }
+    .grades-summary {
+      font-size: 0.875rem;
+      margin-bottom: 0.75rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .grade-badge {
+      display: inline-block;
+      padding: 0.125rem 0.5rem;
+      border-radius: 9999px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+    .grade-pass { background: var(--green-bg); color: var(--green); }
+    .grade-fail { background: var(--red-bg); color: var(--red); }
+    .assertion-list {
+      list-style: none;
+    }
+    .assertion-item {
+      padding: 0.625rem 0;
+      border-bottom: 1px solid var(--border);
+      font-size: 0.8125rem;
+    }
+    .assertion-item:last-child { border-bottom: none; }
+    .assertion-status {
+      font-weight: 600;
+      margin-right: 0.5rem;
+    }
+    .assertion-status.pass { color: var(--green); }
+    .assertion-status.fail { color: var(--red); }
+    .assertion-evidence {
+      color: var(--text-muted);
+      font-size: 0.75rem;
+      margin-top: 0.25rem;
+      padding-left: 1.5rem;
+    }
+
+    /* ---- View tabs ---- */
+    .view-tabs {
+      display: flex;
+      gap: 0;
+      padding: 0 2rem;
+      background: var(--bg);
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    .view-tab {
+      font-family: 'Poppins', sans-serif;
+      padding: 0.625rem 1.25rem;
+      font-size: 0.8125rem;
+      font-weight: 500;
+      cursor: pointer;
+      border: none;
+      background: none;
+      color: var(--text-muted);
+      border-bottom: 2px solid transparent;
+      transition: all 0.15s;
+    }
+    .view-tab:hover { color: var(--text); }
+    .view-tab.active {
+      color: var(--accent);
+      border-bottom-color: var(--accent);
+    }
+    .view-panel { display: none; }
+    .view-panel.active { display: flex; flex-direction: column; flex: 1; overflow: hidden; }
+
+    /* ---- Benchmark view ---- */
+    .benchmark-view {
+      padding: 1.5rem 2rem;
+      overflow-y: auto;
+      flex: 1;
+    }
+    .benchmark-table {
+      border-collapse: collapse;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      font-size: 0.8125rem;
+      width: 100%;
+      margin-bottom: 1.5rem;
+    }
+    .benchmark-table th, .benchmark-table td {
+      padding: 0.625rem 0.75rem;
+      text-align: left;
+      border: 1px solid var(--border);
+    }
+    .benchmark-table th {
+      font-family: 'Poppins', sans-serif;
+      background: var(--header-bg);
+      color: var(--header-text);
+      font-weight: 500;
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .benchmark-table tr:hover { background: var(--bg); }
+    .benchmark-table tr.benchmark-row-with { background: rgba(33, 150, 243, 0.06); }
+    .benchmark-table tr.benchmark-row-without { background: rgba(255, 193, 7, 0.06); }
+    .benchmark-table tr.benchmark-row-with:hover { background: rgba(33, 150, 243, 0.12); }
+    .benchmark-table tr.benchmark-row-without:hover { background: rgba(255, 193, 7, 0.12); }
+    .benchmark-table tr.benchmark-row-avg { font-weight: 600; border-top: 2px solid var(--border); }
+    .benchmark-table tr.benchmark-row-avg.benchmark-row-with { background: rgba(33, 150, 243, 0.12); }
+    .benchmark-table tr.benchmark-row-avg.benchmark-row-without { background: rgba(255, 193, 7, 0.12); }
+    .benchmark-delta-positive { color: var(--green); font-weight: 600; }
+    .benchmark-delta-negative { color: var(--red); font-weight: 600; }
+    .benchmark-notes {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1rem;
+    }
+    .benchmark-notes h3 {
+      font-family: 'Poppins', sans-serif;
+      font-size: 0.875rem;
+      margin-bottom: 0.75rem;
+    }
+    .benchmark-notes ul {
+      list-style: disc;
+      padding-left: 1.25rem;
+    }
+    .benchmark-notes li {
+      font-size: 0.8125rem;
+      line-height: 1.6;
+      margin-bottom: 0.375rem;
+    }
+    .benchmark-empty {
+      color: var(--text-muted);
+      font-style: italic;
+      text-align: center;
+      padding: 3rem;
+    }
+
+    /* ---- Navigation ---- */
+    .nav {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1rem 2rem;
+      border-top: 1px solid var(--border);
+      background: var(--surface);
+      flex-shrink: 0;
+    }
+    .nav-btn {
+      font-family: 'Poppins', sans-serif;
+      padding: 0.5rem 1.25rem;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--surface);
+      cursor: pointer;
+      font-size: 0.875rem;
+      font-weight: 500;
+      color: var(--text);
+      transition: all 0.15s;
+    }
+    .nav-btn:hover:not(:disabled) {
+      background: var(--bg);
+      border-color: var(--text-muted);
+    }
+    .nav-btn:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+    .done-btn {
+      font-family: 'Poppins', sans-serif;
+      padding: 0.5rem 1.5rem;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--surface);
+      color: var(--text);
+      cursor: pointer;
+      font-size: 0.875rem;
+      font-weight: 500;
+      transition: all 0.15s;
+    }
+    .done-btn:hover {
+      background: var(--bg);
+      border-color: var(--text-muted);
+    }
+    .done-btn.ready {
+      border: none;
+      background: var(--accent);
+      color: white;
+      font-weight: 600;
+    }
+    .done-btn.ready:hover {
+      background: var(--accent-hover);
+    }
+    /* ---- Done overlay ---- */
+    .done-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.5);
+      z-index: 100;
+      justify-content: center;
+      align-items: center;
+    }
+    .done-overlay.visible {
+      display: flex;
+    }
+    .done-card {
+      background: var(--surface);
+      border-radius: 12px;
+      padding: 2rem 3rem;
+      text-align: center;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      max-width: 500px;
+    }
+    .done-card h2 {
+      font-size: 1.5rem;
+      margin-bottom: 0.5rem;
+    }
+    .done-card p {
+      color: var(--text-muted);
+      margin-bottom: 1.5rem;
+      line-height: 1.5;
+    }
+    .done-card .btn-row {
+      display: flex;
+      gap: 0.5rem;
+      justify-content: center;
+    }
+    .done-card button {
+      padding: 0.5rem 1.25rem;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--surface);
+      cursor: pointer;
+      font-size: 0.875rem;
+    }
+    .done-card button:hover {
+      background: var(--bg);
+    }
+    /* ---- Toast ---- */
+    .toast {
+      position: fixed;
+      bottom: 5rem;
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--header-bg);
+      color: var(--header-text);
+      padding: 0.625rem 1.25rem;
+      border-radius: var(--radius);
+      font-size: 0.875rem;
+      opacity: 0;
+      transition: opacity 0.3s;
+      pointer-events: none;
+      z-index: 200;
+    }
+    .toast.visible {
+      opacity: 1;
+    }
+  </style>
+</head>
+<body>
+  <div id="app" style="height:100vh; display:flex; flex-direction:column;">
+    <div class="header">
+      <div>
+        <h1>Eval Review: <span id="skill-name"></span></h1>
+        <div class="instructions">Review each output and leave feedback below. Navigate with arrow keys or buttons. When done, copy feedback and paste into Claude Code.</div>
+      </div>
+      <div class="progress" id="progress"></div>
+    </div>
+
+    <!-- View tabs (only shown when benchmark data exists) -->
+    <div class="view-tabs" id="view-tabs" style="display:none;">
+      <button class="view-tab active" onclick="switchView('outputs')">Outputs</button>
+      <button class="view-tab" onclick="switchView('benchmark')">Benchmark</button>
+    </div>
+
+    <!-- Outputs panel (qualitative review) -->
+    <div class="view-panel active" id="panel-outputs">
+    <div class="main">
+      <!-- Prompt -->
+      <div class="section">
+        <div class="section-header">Prompt <span class="config-badge" id="config-badge" style="display:none;"></span></div>
+        <div class="section-body">
+          <div class="prompt-text" id="prompt-text"></div>
+        </div>
+      </div>
+
+      <!-- Outputs -->
+      <div class="section">
+        <div class="section-header">Output</div>
+        <div class="section-body" id="outputs-body">
+          <div class="empty-state">No output files found</div>
+        </div>
+      </div>
+
+      <!-- Previous Output (collapsible) -->
+      <div class="section" id="prev-outputs-section" style="display:none;">
+        <div class="section-header">
+          <div class="grades-toggle" onclick="togglePrevOutputs()">
+            <span class="arrow" id="prev-outputs-arrow">&#9654;</span>
+            Previous Output
+          </div>
+        </div>
+        <div class="grades-content" id="prev-outputs-content"></div>
+      </div>
+
+      <!-- Grades (collapsible) -->
+      <div class="section" id="grades-section" style="display:none;">
+        <div class="section-header">
+          <div class="grades-toggle" onclick="toggleGrades()">
+            <span class="arrow" id="grades-arrow">&#9654;</span>
+            Formal Grades
+          </div>
+        </div>
+        <div class="grades-content" id="grades-content"></div>
+      </div>
+
+      <!-- Feedback -->
+      <div class="section">
+        <div class="section-header">Your Feedback</div>
+        <div class="section-body">
+          <textarea
+            class="feedback-textarea"
+            id="feedback"
+            placeholder="What do you think of this output? Any issues, suggestions, or things that look great?"
+          ></textarea>
+          <div class="feedback-status" id="feedback-status"></div>
+          <div class="prev-feedback" id="prev-feedback" style="display:none;">
+            <div class="prev-feedback-label">Previous feedback</div>
+            <div id="prev-feedback-text"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="nav" id="outputs-nav">
+      <button class="nav-btn" id="prev-btn" onclick="navigate(-1)">&#8592; Previous</button>
+      <button class="done-btn" id="done-btn" onclick="showDoneDialog()">Submit All Reviews</button>
+      <button class="nav-btn" id="next-btn" onclick="navigate(1)">Next &#8594;</button>
+    </div>
+    </div><!-- end panel-outputs -->
+
+    <!-- Benchmark panel (quantitative stats) -->
+    <div class="view-panel" id="panel-benchmark">
+      <div class="benchmark-view" id="benchmark-content">
+        <div class="benchmark-empty">No benchmark data available. Run a benchmark to see quantitative results here.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Done overlay -->
+  <div class="done-overlay" id="done-overlay">
+    <div class="done-card">
+      <h2>Review Complete</h2>
+      <p>Your feedback has been saved. Go back to your Claude Code session and tell Claude you're done reviewing.</p>
+      <div class="btn-row">
+        <button onclick="closeDoneDialog()">OK</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div class="toast" id="toast"></div>
+
+  <script>
+    // ---- Embedded data (injected by generate_review.py) ----
+    const EMBEDDED_DATA = {"skill_name": "meeting-minutes", "runs": [{"id": "claude-sonnet-5-5-eval-1-weekly-sync-minutes-with_skill-run-1", "prompt": "can you do the minutes from today's data platform sync? transcript is in inputs/transcript.txt. need to send them round this afternoon", "eval_id": 1, "outputs": [{"name": "final_response.md", "type": "text", "content": "The minutes are in `outputs/minutes.md`, ready to send round.\n\n- **Decisions:** the dashboard refresh moves to hourly, and the old S3 bucket is retired on 2026-10-31.\n- **Action items:**\n  - Rahul changes the refresh to hourly by 2026-10-09 (this Friday).\n  - Meera writes the Power BI estimate by 2026-10-16 (end of next week).\n  - The dbt macro check has no owner, so I marked it `UNASSIGNED` with no due date. It's also in Open questions. Please assign it before sending.\n- **Open questions:** the dbt 1.9 upgrade is not decided until the macro check is done. Adding the churn report to Power BI is also undecided, pending Meera's estimate.\n- **Confidential line:** I added \"Confidential - internal distribution only\" because Tom is named as a Victaulic product owner. Remove it if you don't want it.\n- **Left out:** the coffee joke and small talk.\n- **Dates:** relative dates are worked out from the meeting date, Tuesday 2026-10-06.\n- **S3 bucket:** nobody was named to carry out the retirement, so I didn't create an action item for it. Add one if you want it tracked."}, {"name": "minutes.md", "type": "text", "content": "# Data platform weekly sync - 2026-10-06\nConfidential - internal distribution only\n\n**Attendees:** Anita (eng manager), Rahul (data engineer), Meera (analyst), Tom (Victaulic, product owner)   **Absent:** Sam\n\n## Decisions\n1. The new dashboard refresh moves from every 5 minutes to hourly, to reduce the Snowflake cost spike.\n2. The old S3 bucket will be retired on 2026-10-31 (previously agreed, reconfirmed).\n\n## Action items\n| # | Action | Owner | Due |\n|---|---|---|---|\n| 1 | Change the dashboard refresh to hourly | Rahul | 2026-10-09 |\n| 2 | Write up the Power BI effort estimate for the churn report | Meera | 2026-10-16 |\n| 3 | Check the existing dbt macros for compatibility with dbt 1.9 | UNASSIGNED | TBD |\n\n## Open questions\n- Upgrade to dbt 1.9? Not decided until the macro check is done - owner of the macro check needed (action 3).\n- Who will check the dbt macros, and by when? - Anita\n- Add the churn report to Power BI as well as Tableau? Capacity is uncertain - decide after Meera's estimate (Anita, Tom)\n"}], "grading": {"expectations": [{"text": "minutes.md has Decisions, Action items and Open questions, and every action item has one owner and a YYYY-MM-DD due date", "passed": false, "evidence": "[script evals/checks/minutes_format.py] problems: bad row: | 3 | Check the existing dbt macros for compatibility with dbt 1.9 | UNASSIGNED"}, {"text": "Rahul's hourly-refresh action is due 2026-10-09 and Meera's Power BI estimate is due 2026-10-16", "passed": true, "evidence": "minutes.md action table: Rahul 'Change the dashboard refresh to hourly' due 2026-10-09; Meera 'Write up the Power BI effort estimate' due 2026-10-16. Meeting Tue 2026-10-06, so Friday = 10-09 and end of next week = 10-16."}, {"text": "The dbt 1.9 upgrade and Power BI support appear under Open questions, not under Decisions", "passed": true, "evidence": "Open questions lists 'Upgrade to dbt 1.9?' and 'Add the churn report to Power BI...'. Decisions contains only the hourly refresh and S3 retirement."}, {"text": "Retiring the old S3 bucket on 2026-10-31 is recorded as a decision", "passed": true, "evidence": "Decisions item 2: 'The old S3 bucket will be retired on 2026-10-31 (previously agreed, reconfirmed).'"}, {"text": "A 'Confidential - internal distribution only' line appears because Victaulic is named", "passed": true, "evidence": "minutes.md line 2: 'Confidential - internal distribution only'; Victaulic is named in the attendees line, and the final response explains this."}, {"text": "No small talk (coffee joke, audio check) is included", "passed": true, "evidence": "No mention of the audio check or coffee in minutes.md. The final response mentions the coffee joke only to say it was left out."}], "summary": {"passed": 5, "failed": 1, "total": 6, "pass_rate": 0.8333}, "execution_metrics": {"tool_calls": {"Skill": 1, "Bash": 2}, "total_tool_calls": 3, "total_steps": 5, "files_created": ["minutes.md"], "errors_encountered": 0, "harness_error": false, "harness_error_message": "", "output_chars": 2098, "transcript_chars": 4953, "skill_triggered": true}, "claims": [{"claim": "The dbt macro check has no owner, so it was marked UNASSIGNED", "type": "factual", "verified": true, "evidence": "In the transcript Meera says 'Someone needs to check them' and nobody is assigned."}, {"claim": "No owner was named for the S3 retirement, so no action item was created", "type": "process", "verified": true, "evidence": "Only Rahul says 'fine'; there is no assignment in the transcript."}, {"claim": "Hourly refresh is due 2026-10-09 (this Friday)", "type": "factual", "verified": true, "evidence": "The meeting was on Tue 2026-10-06, so Friday is 10-09."}], "user_notes_summary": {"uncertainties": [], "needs_review": ["dbt macro check is unassigned and needs an owner before sending"], "workarounds": []}, "eval_feedback": {"suggestions": [{"assertion": "The dbt 1.9 upgrade and Power BI support appear under Open questions, not under Decisions", "reason": "Add an assertion that the dbt macro-check action is UNASSIGNED rather than given to an invented owner. The transcript is built to trap that, and nothing checks it."}, {"assertion": "No small talk (coffee joke, audio check) is included", "reason": "A grader could mistake the final chat response, which mentions the coffee joke, for a violation. Specify that the check applies to the minutes file only."}], "overall": "The assertions cover the main traps, but nothing checks the unassigned-owner handling or the absentee (Sam) listing."}}}, {"id": "claude-sonnet-5-5-eval-1-weekly-sync-minutes-without_skill-run-1", "prompt": "can you do the minutes from today's data platform sync? transcript is in inputs/transcript.txt. need to send them round this afternoon", "eval_id": 1, "outputs": [{"name": "final_response.md", "type": "text", "content": "I've written the minutes and saved them to `outputs/minutes.md`. They cover the four agenda items, the decisions and a table of actions.\n\nCheck these before you send them round:\n- **Meeting date:** the transcript is dated Tuesday 6 Oct, not today (Fri 9 Oct). I dated the minutes 6 Oct, so tell me if you want that changed.\n- **dbt macro check:** nobody was assigned it. It's listed as unassigned and flagged as an open item, because it blocks the dbt 1.9 decision. You'll probably want to name someone first.\n- **Rahul's hourly refresh:** \"by this Friday\" is Fri 9 Oct, which is today. I took that as the due date.\n- **Meera's Power BI estimate:** \"end of next week\" is Fri 16 Oct. I left the Power BI request itself as undecided.\n- **S3 bucket:** the transcript says only \"the 31st\". I assumed 31 October. Rahul said \"fine\" but wasn't explicitly given the retirement task, so I marked the owner as \"Not named (Rahul presumably)\".\n- **Left out:** Anita's coffee joke. Sam is listed as an apology."}, {"name": "minutes.md", "type": "text", "content": "# Data Platform Weekly Sync \u2013 Minutes\n\n**Date:** Tuesday 6 October 2026\n**Present:** Anita (Engineering Manager), Rahul (Data Engineer), Meera (Analyst), Tom (Victaulic, Product Owner)\n**Apologies:** Sam\n\n## 1. Snowflake cost spike\n- Cause: the new dashboard was refreshing every 5 minutes.\n- Tom confirmed an hourly refresh is fine for Victaulic.\n- **Decision:** dashboard moves to an hourly refresh from now on.\n\n## 2. dbt upgrade\n- Meera recommends moving to dbt 1.9 but is unsure whether the existing macros will work. They need to be checked first.\n- **Decision:** none today. The upgrade is deferred until the macro check is done.\n\n## 3. Churn report in Power BI (in addition to Tableau)\n- Tom asked for the churn report to be available in Power BI as well as Tableau.\n- Anita is unsure there is capacity; no decision made.\n- Meera will produce an effort estimate to inform the decision.\n\n## 4. Retiring the old S3 bucket\n- Retirement was agreed last month; reconfirmed in this meeting.\n- **Decision:** the old S3 bucket is retired on the 31st (October, assuming the month from context). Rahul had no objection.\n\n## Actions\n\n| # | Action | Owner | Due |\n|---|--------|-------|-----|\n| 1 | Change the dashboard refresh from 5 minutes to hourly | Rahul | Fri 9 Oct 2026 |\n| 2 | Write up the Power BI effort estimate for the churn report | Meera | End of next week (Fri 16 Oct 2026) |\n| 3 | Check the dbt macros for compatibility with dbt 1.9 | **Unassigned** | TBC |\n| 4 | Retire the old S3 bucket | Not named (Rahul presumably) | 31 Oct 2026 |\n\n## Open items\n- No one was assigned the dbt macro check, which blocks the dbt 1.9 decision. Needs an owner.\n- Power BI request is undecided pending Meera's estimate.\n"}], "grading": {"expectations": [{"text": "minutes.md has Decisions, Action items and Open questions, and every action item has one owner and a YYYY-MM-DD due date", "passed": false, "evidence": "[script evals/checks/minutes_format.py] problems: ## Decisions; ## Action items; ## Open questions; bad row: | 1 | Change the dashboard refresh from 5 minutes to hourly | Rahul | Fri 9 Oct ; bad row: | 2 | Write up the Power BI effort estimate for the churn report | Meera | End o; bad row: | 3 | Check the dbt macros for compatibility with dbt 1.9 | **Unassigned** | TBC; bad row: | 4 | Retire the old S3 bucket | Not named (Rahul presumably) | 31 Oct 2026 |"}, {"text": "Rahul's hourly-refresh action is due 2026-10-09 and Meera's Power BI estimate is due 2026-10-16", "passed": true, "evidence": "Actions table: Rahul 'Fri 9 Oct 2026'; Meera 'End of next week (Fri 16 Oct 2026)'."}, {"text": "The dbt 1.9 upgrade and Power BI support appear under Open questions, not under Decisions", "passed": false, "evidence": "No 'Open questions' section; there is 'Open items' listing the dbt macro check (blocking the 1.9 decision) and Power BI undecided. But the dbt section is labelled '**Decision:** none today', and the dbt 1.9 upgrade itself is not listed as an open question. Partial, treated as fail."}, {"text": "Retiring the old S3 bucket on 2026-10-31 is recorded as a decision", "passed": true, "evidence": "'**Decision:** the old S3 bucket is retired on the 31st (October...)'; action due 31 Oct 2026."}, {"text": "A 'Confidential - internal distribution only' line appears because Victaulic is named", "passed": false, "evidence": "minutes.md has no confidentiality line, although Victaulic is named in the Present list and item 1."}, {"text": "No small talk (coffee joke, audio check) is included", "passed": true, "evidence": "minutes.md contains neither the coffee joke nor the audio check."}], "summary": {"passed": 3, "failed": 3, "total": 6, "pass_rate": 0.5}, "execution_metrics": {"tool_calls": {"Bash": 2}, "total_tool_calls": 2, "total_steps": 3, "files_created": ["minutes.md"], "errors_encountered": 0, "harness_error": false, "harness_error_message": "", "output_chars": 2715, "transcript_chars": 5034, "skill_triggered": null}, "claims": [{"claim": "The dbt macro check was unassigned", "type": "factual", "verified": true, "evidence": "Transcript: Meera says 'Someone needs to check them'; no owner named."}, {"claim": "'by this Friday' is 9 Oct", "type": "factual", "verified": true, "evidence": "Meeting Tue 6 Oct 2026, so Friday is 9 Oct."}, {"claim": "The S3 month is October", "type": "process", "verified": false, "evidence": "Assumed from context, and flagged as an assumption in the output."}], "user_notes_summary": {"uncertainties": ["S3 retirement month assumed to be October", "S3 owner not named"], "needs_review": ["dbt macro check owner", "Meeting date vs today"], "workarounds": []}, "eval_feedback": {"suggestions": [{"assertion": "The dbt 1.9 upgrade and Power BI support appear under Open questions, not under Decisions", "reason": "Ambiguous on heading names; consider accepting equivalents such as 'Open items' and stating whether the macro check or the upgrade itself must be listed."}, {"reason": "No assertion checks that the unassigned dbt macro check is flagged, nor that the S3 month assumption is surfaced. Both were handled well here."}], "overall": "Without the skill, the baseline missed the confidentiality line, which is the discriminating assertion. The date and small-talk checks are easy to pass."}}}, {"id": "claude-sonnet-5-5-eval-2-unowned-action-with_skill-run-1", "prompt": "minutes please, meeting was Monday 2026-10-05: we agreed to move standup to 10am. someone needs to update the calendar invite but nobody volunteered. Priya will send the Q3 numbers end of month.", "eval_id": 2, "outputs": [{"name": "final_response.md", "type": "text", "content": "I wrote the minutes to `outputs/minutes.md`.\n\n- **Decision:** Standup moves to 10:00am.\n- **Action items:**\n  - Priya sends the Q3 numbers by 2026-10-31. I read \"end of month\" as the end of October, since the meeting was 2026-10-05.\n  - Updating the calendar invite is marked `UNASSIGNED` with no due date, because nobody volunteered. It is also listed under Open questions.\n- **Gaps:** You didn't give a meeting title or an attendee list. I used \"Team Meeting\" as the title and left attendees and absentees as \"not recorded\". Send me the names and a title and I'll fill them in."}, {"name": "minutes.md", "type": "text", "content": "# Team Meeting - 2026-10-05\n**Attendees:** not recorded (Priya attended)   **Absent:** not recorded\n\n## Decisions\n1. Standup moves to 10:00am.\n\n## Action items\n| # | Action | Owner | Due |\n|---|---|---|---|\n| 1 | Update the calendar invite for the new standup time | UNASSIGNED | - |\n| 2 | Send the Q3 numbers | Priya | 2026-10-31 |\n\n## Open questions\n- Who will update the calendar invite for the 10am standup? Nobody volunteered, and no due date was set. - to be assigned\n"}], "grading": {"expectations": [{"text": "The calendar-invite action has owner UNASSIGNED and is also listed under Open questions", "passed": true, "evidence": "minutes.md action row: '| 1 | Update the calendar invite for the new standup time | UNASSIGNED | - |' and Open questions: 'Who will update the calendar invite for the 10am standup? Nobody volunteered...'"}, {"text": "Priya's Q3 numbers action is due 2026-10-31", "passed": true, "evidence": "minutes.md action row: '| 2 | Send the Q3 numbers | Priya | 2026-10-31 |'"}, {"text": "Moving standup to 10am is recorded as a decision", "passed": true, "evidence": "minutes.md Decisions: '1. Standup moves to 10:00am.'"}], "summary": {"passed": 3, "failed": 0, "total": 3, "pass_rate": 1.0}, "execution_metrics": {"tool_calls": {"Skill": 1, "Write": 1}, "total_tool_calls": 2, "total_steps": 4, "files_created": ["minutes.md"], "errors_encountered": 0, "harness_error": false, "harness_error_message": "", "output_chars": 1053, "transcript_chars": 2669, "skill_triggered": true}, "claims": [{"claim": "'End of month' was interpreted as end of October (2026-10-31)", "type": "factual", "verified": true, "evidence": "Meeting on 2026-10-05; due date 2026-10-31 is correct for that interpretation"}, {"claim": "The calendar invite item is also listed under Open questions", "type": "process", "verified": true, "evidence": "Present in the Open questions section of minutes.md"}], "user_notes_summary": {"uncertainties": [], "needs_review": ["Title and attendees not provided; defaulted to 'Team Meeting' and 'not recorded'"], "workarounds": []}, "eval_feedback": {"suggestions": [{"assertion": "The calendar-invite action has owner UNASSIGNED and is also listed under Open questions", "reason": "Doesn't check that the unowned item isn't assigned to a guessed person, or that the due date is left blank instead of invented. A check that no invented attendee or owner appears would be more discriminating."}, {"reason": "No assertion covers fabrication of title/attendees; the output used 'Team Meeting' as a title, which was invented but flagged."}], "overall": "Assertions cover the key behaviors but are fairly easy to satisfy; add checks against hallucinated owners, dates, and attendees."}}}, {"id": "claude-sonnet-5-5-eval-2-unowned-action-without_skill-run-1", "prompt": "minutes please, meeting was Monday 2026-10-05: we agreed to move standup to 10am. someone needs to update the calendar invite but nobody volunteered. Priya will send the Q3 numbers end of month.", "eval_id": 2, "outputs": [{"name": "final_response.md", "type": "text", "content": "Minutes saved to `./outputs/meeting-minutes-2026-10-05.md`.\n\n**Meeting minutes, Monday 2026-10-05**\n\n**Decision**\n- Standup moves to 10:00 AM.\n\n**Action items**\n- Priya will send the Q3 numbers by the end of the month (2026-10-31).\n- Updating the calendar invite has **no owner**, because nobody volunteered. I listed it as unassigned rather than picking someone.\n\n**Open issue**\n- Someone needs to be assigned the calendar invite update. If you tell me who, I'll update the minutes.\n\nI took \"end of month\" to mean 2026-10-31, since you didn't say which month."}, {"name": "meeting-minutes-2026-10-05.md", "type": "text", "content": "# Meeting Minutes \u2014 Monday, 2026-10-05\n\n## Decisions\n- Daily standup moves to **10:00 AM**.\n\n## Action Items\n| # | Action | Owner | Due |\n|---|--------|-------|-----|\n| 1 | Send Q3 numbers | Priya | End of month (2026-10-31) |\n| 2 | Update the calendar invite for the new standup time | **Unassigned** \u2014 nobody volunteered | TBD |\n\n## Open Issues\n- Calendar invite update has no owner. Needs someone to be assigned before the new time takes effect.\n"}], "grading": {"expectations": [{"text": "The calendar-invite action has owner UNASSIGNED and is also listed under Open questions", "passed": true, "evidence": "Action table row 2: owner '**Unassigned** \u2014 nobody volunteered'; the 'Open Issues' section also lists 'Calendar invite update has no owner.' Heading is 'Open Issues' rather than 'Open questions' and the label is 'Unassigned' not literal 'UNASSIGNED', but the meaning is satisfied."}, {"text": "Priya's Q3 numbers action is due 2026-10-31", "passed": true, "evidence": "Row 1: 'Send Q3 numbers | Priya | End of month (2026-10-31)'. The response also states the month assumption."}, {"text": "Moving standup to 10am is recorded as a decision", "passed": true, "evidence": "'## Decisions - Daily standup moves to **10:00 AM**.'"}], "summary": {"passed": 3, "failed": 0, "total": 3, "pass_rate": 1.0}, "execution_metrics": {"tool_calls": {"Bash": 1}, "total_tool_calls": 1, "total_steps": 2, "files_created": ["meeting-minutes-2026-10-05.md"], "errors_encountered": 0, "harness_error": false, "harness_error_message": "", "output_chars": 1013, "transcript_chars": 2106, "skill_triggered": null}, "claims": [{"claim": "'End of month' means 2026-10-31", "type": "factual", "verified": true, "evidence": "Meeting was 2026-10-05, so October end is 10-31; the assumption was disclosed."}, {"claim": "Calendar invite action was left unassigned rather than assigning someone", "type": "process", "verified": true, "evidence": "Output file shows Unassigned owner."}], "user_notes_summary": {"uncertainties": [], "needs_review": [], "workarounds": []}, "eval_feedback": {"suggestions": [{"assertion": "The calendar-invite action has owner UNASSIGNED and is also listed under Open questions", "reason": "The assertion combines two checks and depends on exact wording. A baseline with no skill passes it, so it may not discriminate skill value. Consider checking for the literal token or a defined schema, and that no person was invented as owner."}, {"reason": "No assertion checks that the output contains no fabricated attendees, or that the calendar action has no due date invented. Both are the main failure modes for this case."}], "overall": "Assertions are satisfied by a plain baseline response, so they are weakly discriminating."}}}, {"id": "claude-sonnet-5-5-eval-3-agenda-not-minutes-with_skill-run-1", "prompt": "draft an agenda for next week's data platform sync: cost review, dbt upgrade, Power BI request. 45 minutes.", "eval_id": 3, "outputs": [{"name": "agenda.md", "type": "text", "content": "# Data Platform Sync: Agenda\n\n**Date/time:** [week of 12 Oct 2026, day/time TBC]\n**Duration:** 45 minutes\n**Attendees:** [add names]\n**Facilitator / note-taker:** [TBC]\n\n| # | Time | Topic | Lead | Outcome needed |\n|---|------|-------|------|----------------|\n| 1 | 0:00\u20130:05 (5 min) | Kick-off and review of last sync's actions | Facilitator | Confirm status of open items |\n| 2 | 0:05\u20130:20 (15 min) | **Cost review** | [TBC] | Agree 1\u20133 cost actions with owners |\n| 3 | 0:20\u20130:33 (13 min) | **dbt upgrade** | [TBC] | Go/no-go on approach and target date |\n| 4 | 0:33\u20130:42 (9 min) | **Power BI request** | [TBC] | Accept, decline or defer; name an owner |\n| 5 | 0:42\u20130:45 (3 min) | Wrap-up: recap decisions, actions, owners, due dates | Facilitator | Actions read back |\n\n## 2. Cost review (15 min)\n- Spend vs. budget and vs. last period (warehouse compute, storage, orchestration, BI licences)\n- Biggest drivers and any anomalies or spikes\n- Quick-win options (warehouse sizing, auto-suspend, query or model optimisation, retention)\n- **Decision:** which optimisations to pursue, who owns them, and by when\n\n## 3. dbt upgrade (13 min)\n- Current version vs. target version; reason for upgrading (support end, features, fixes)\n- Known breaking changes, deprecated packages and adapter compatibility\n- Testing and rollout plan (dev \u2192 staging \u2192 prod), rollback plan\n- Effort estimate and impact on other work\n- **Decision:** go/no-go, target date, owner\n\n## 4. Power BI request (9 min)\n- Requester, business need and users affected\n- Data sources: do the required models already exist in the platform, or is new modelling needed?\n- Effort, licensing or capacity impact, and cost implications (links to item 2)\n- **Decision:** accept, decline or defer; owner and rough timeline\n\n## Pre-reads / prep\n- Cost: latest cost dashboard or export, with a one-paragraph summary from the lead\n- dbt: upgrade notes and a list of impacted models/packages\n- Power BI: the request ticket or description\n\n## Notes\n- If a topic overruns, park it for a follow-up thread rather than cutting into the wrap-up.\n- Time is weighted to cost review as the broadest topic. Adjust if the Power BI request is more urgent.\n"}, {"name": "final_response.md", "type": "text", "content": "I've drafted the 45-minute agenda and saved it to `outputs/agenda.md`. I didn't use the meeting-minutes skill, since it covers minutes rather than agendas.\n\n| Time | Topic |\n|---|---|\n| 0:00\u20130:05 | Kick-off and review of last sync's actions |\n| 0:05\u20130:20 | Cost review (15 min): spend vs. budget, main drivers, quick wins. Decision on which optimisations to pursue. |\n| 0:20\u20130:33 | dbt upgrade (13 min): version gap, breaking changes, rollout and rollback plan, effort. Go/no-go and target date. |\n| 0:33\u20130:42 | Power BI request (9 min): business need, whether the data already exists, cost and licence impact. Accept, decline or defer. |\n| 0:42\u20130:45 | Wrap-up: decisions, owners and due dates read back |\n\nThe file also has pre-read suggestions for each item. The date, attendees, topic leads and facilitator are placeholders for you to fill in. I put the most time on the cost review because it's the broadest topic. Move minutes around if the Power BI request is more urgent."}], "grading": {"expectations": [{"text": "The reply is an agenda with the three topics and time allocations adding up to about 45 minutes", "passed": true, "evidence": "Reply table and agenda.md list cost review (15), dbt upgrade (13), Power BI request (9) plus kick-off (5) and wrap-up (3) = 45 min, timeslots 0:00\u20130:45."}, {"text": "No minutes.md, decisions or action-item table is produced", "passed": true, "evidence": "Only agenda.md, final_response.md, metrics.json in outputs. No minutes.md; no action-item table. 'Decision:' bullets are prompts for discussion, not recorded decisions. skill_triggered false."}, {"text": "Skill not invoked (automatic check)", "passed": true, "evidence": "skill not loaded"}], "summary": {"passed": 3, "failed": 0, "total": 3, "pass_rate": 1.0}, "execution_metrics": {"tool_calls": {"Write": 1}, "total_tool_calls": 1, "total_steps": 2, "files_created": ["agenda.md"], "errors_encountered": 0, "harness_error": false, "harness_error_message": "", "output_chars": 3196, "transcript_chars": 4017, "skill_triggered": false}, "claims": [{"claim": "Agenda totals 45 minutes", "type": "factual", "verified": true, "evidence": "5+15+13+9+3=45"}, {"claim": "Did not use the meeting-minutes skill", "type": "process", "verified": true, "evidence": "metrics skill_triggered false; only a Write call"}], "user_notes_summary": {"uncertainties": [], "needs_review": [], "workarounds": []}, "eval_feedback": {"suggestions": [{"assertion": "No minutes.md, decisions or action-item table is produced", "reason": "Agenda includes 'Decision:' headings and an 'Outcome needed' column, which a naive check could confuse with decisions; make the assertion explicit that agenda prompts are fine, and check that no past-tense decisions are fabricated."}, {"reason": "Skill-trigger assertion is absent; this negative test could also check the skill was not invoked."}], "overall": "Assertions are reasonable but the first is loose about exact allocations."}}}, {"id": "claude-sonnet-5-5-eval-3-agenda-not-minutes-without_skill-run-1", "prompt": "draft an agenda for next week's data platform sync: cost review, dbt upgrade, Power BI request. 45 minutes.", "eval_id": 3, "outputs": [{"name": "data-platform-sync-agenda.md", "type": "text", "content": "# Data Platform Sync \u2014 Agenda\n\n**Date:** [Next week, day/time TBD]\n**Duration:** 45 minutes\n**Facilitator:** [Name]  |  **Notes:** [Name]\n**Attendees:** [Data platform team, BI stakeholders]\n\n**Goal:** Leave with a cost action list, a dbt upgrade go/no-go and timeline, and a decision on the Power BI request.\n\n| Time | Topic | Lead | Outcome needed |\n|------|-------|------|----------------|\n| 0:00\u20130:03 (3 min) | Kickoff and agenda check | Facilitator | Confirm agenda; review open actions from last sync |\n| 0:03\u20130:18 (15 min) | **Cost review** | [Name] | Agree on the top cost drivers and owners for savings actions |\n| 0:18\u20130:33 (15 min) | **dbt upgrade** | [Name] | Go/no-go, target version, date, and owner |\n| 0:33\u20130:42 (9 min) | **Power BI request** | [Requester / Name] | Accept, defer, or decline; define next steps |\n| 0:42\u20130:45 (3 min) | Wrap-up | Facilitator | Read back decisions, actions, and owners |\n\n## 1. Cost review (15 min)\n- Spend vs. budget: month-to-date and trend (warehouse compute, storage, orchestration, BI licensing)\n- Top cost drivers and any anomalies or spikes\n- Optimization opportunities (query/model tuning, warehouse sizing, scheduling, retention)\n- **Decision:** which savings actions to commit to, with owners and dates\n\n## 2. dbt upgrade (15 min)\n- Current vs. target version; key breaking changes and deprecations\n- Readiness: test coverage, package compatibility, CI status, adapter support\n- Rollout plan: dev/staging validation, cutover window, rollback approach\n- Risks and effort estimate\n- **Decision:** go/no-go, timeline, and owner\n\n## 3. Power BI request (9 min)\n- Request summary: who is asking, the business need, and the desired timeline\n- Data requirements: sources, existing models vs. new work, refresh cadence\n- Impact: effort, licensing/capacity cost, and governance or security considerations\n- **Decision:** accept, defer, or decline; if accepted, assign an owner and a first step\n\n## Pre-reads (please review beforehand)\n- Latest cost dashboard or report\n- dbt release notes and the upgrade checklist\n- Power BI request ticket or brief\n\n## Action items\n| Action | Owner | Due |\n|--------|-------|-----|\n|        |       |     |\n\n*If time runs short, the parking lot goes to async follow-up. Costs and the dbt upgrade take priority over open-ended discussion.*\n"}, {"name": "final_response.md", "type": "text", "content": "I drafted a 45-minute agenda for the data platform sync and saved it to `./outputs/data-platform-sync-agenda.md`. The date, facilitator, note-taker, attendees and topic leads are placeholders for you to fill in.\n\n| Time | Topic |\n|---|---|\n| 0:00\u20130:03 | Kickoff and review of open actions |\n| 0:03\u20130:18 | Cost review |\n| 0:18\u20130:33 | dbt upgrade |\n| 0:33\u20130:42 | Power BI request |\n| 0:42\u20130:45 | Wrap-up: decisions, actions and owners |\n\n- **Cost review:** spend against budget, top cost drivers and savings opportunities. It ends with a decision on which savings actions to commit to, with owners.\n- **dbt upgrade:** the current and target versions, readiness, the rollout plan and risks. It ends with a go/no-go, a timeline and an owner.\n- **Power BI request:** the business need, data requirements and cost or governance impact. It ends with a decision to accept, defer or decline.\n\nThe file also lists pre-reads and has an empty action-items table.\n\nI gave the Power BI request the shortest slot (9 minutes), assuming it is mostly a decision. If it needs more discussion, you could shift a few minutes from the cost review."}], "grading": {"expectations": [{"text": "The reply is an agenda with the three topics and time allocations adding up to about 45 minutes", "passed": true, "evidence": "Agenda table: 3+15+15+9+3 = 45 min, covering cost review, dbt upgrade, Power BI request, plus kickoff and wrap-up."}, {"text": "No minutes.md, decisions or action-item table is produced", "passed": false, "evidence": "No minutes.md was created, but the agenda file includes an '## Action items' table (Action | Owner | Due) with an empty row, and the final reply mentions 'an empty action-items table'. Per-topic 'Decision:' bullets are agenda prompts, not recorded decisions."}, {"text": "Skill not invoked (automatic check)", "passed": true, "evidence": "skill not installed in this run"}], "summary": {"passed": 2, "failed": 1, "total": 3, "pass_rate": 0.6667}, "execution_metrics": {"tool_calls": {"Bash": 1, "Write": 1}, "total_tool_calls": 2, "total_steps": 3, "files_created": ["data-platform-sync-agenda.md"], "errors_encountered": 0, "harness_error": false, "harness_error_message": "", "output_chars": 3469, "transcript_chars": 4328, "skill_triggered": null}, "claims": [{"claim": "Agenda saved to outputs/data-platform-sync-agenda.md with 45-minute allocation", "type": "factual", "verified": true, "evidence": "File exists; times sum to 45."}, {"claim": "File lists pre-reads and has an empty action-items table", "type": "factual", "verified": true, "evidence": "Both sections present in file."}], "user_notes_summary": {"uncertainties": [], "needs_review": [], "workarounds": []}, "eval_feedback": {"suggestions": [{"assertion": "No minutes.md, decisions or action-item table is produced", "reason": "Ambiguous: an empty action-items template in an agenda is common and arguably fine. Clarify whether blank templates count, or target 'no filled-in minutes/decisions/actions' and no minutes.md."}], "overall": "Assertion 1 is reasonable; assertion 2 is ambiguous about blank templates."}}}], "previous_feedback": {}, "previous_outputs": {}, "benchmark": {"metadata": {"skill_name": "meeting-minutes", "skill_path": "/home/runner/work/Skill_evaluation_sandbox/Skill_evaluation_sandbox/skills/meeting-minutes", "executor_model": "claude-sonnet-5-5", "analyzer_model": "claude-sonnet-5-5", "timestamp": "2026-10-09T08:48:47Z", "evals_run": [1, 2, 3], "runs_per_configuration": 1, "grader_model": "claude-sonnet-5-5", "configurations": ["with_skill", "without_skill"], "harness_error_runs": 0, "skill_runs_where_skill_not_loaded": 0}, "runs": [{"eval_id": 1, "configuration": "with_skill", "run_number": 1, "result": {"pass_rate": 0.8333, "passed": 5, "failed": 1, "total": 6, "time_seconds": 10.9, "tokens": 54943, "tool_calls": 3, "errors": 0}, "expectations": [{"text": "minutes.md has Decisions, Action items and Open questions, and every action item has one owner and a YYYY-MM-DD due date", "passed": false, "evidence": "[script evals/checks/minutes_format.py] problems: bad row: | 3 | Check the existing dbt macros for compatibility with dbt 1.9 | UNASSIGNED"}, {"text": "Rahul's hourly-refresh action is due 2026-10-09 and Meera's Power BI estimate is due 2026-10-16", "passed": true, "evidence": "minutes.md action table: Rahul 'Change the dashboard refresh to hourly' due 2026-10-09; Meera 'Write up the Power BI effort estimate' due 2026-10-16. Meeting Tue 2026-10-06, so Friday = 10-09 and end of next week = 10-16."}, {"text": "The dbt 1.9 upgrade and Power BI support appear under Open questions, not under Decisions", "passed": true, "evidence": "Open questions lists 'Upgrade to dbt 1.9?' and 'Add the churn report to Power BI...'. Decisions contains only the hourly refresh and S3 retirement."}, {"text": "Retiring the old S3 bucket on 2026-10-31 is recorded as a decision", "passed": true, "evidence": "Decisions item 2: 'The old S3 bucket will be retired on 2026-10-31 (previously agreed, reconfirmed).'"}, {"text": "A 'Confidential - internal distribution only' line appears because Victaulic is named", "passed": true, "evidence": "minutes.md line 2: 'Confidential - internal distribution only'; Victaulic is named in the attendees line, and the final response explains this."}, {"text": "No small talk (coffee joke, audio check) is included", "passed": true, "evidence": "No mention of the audio check or coffee in minutes.md. The final response mentions the coffee joke only to say it was left out."}], "notes": ["dbt macro check is unassigned and needs an owner before sending"], "eval_name": "weekly-sync-minutes"}, {"eval_id": 2, "configuration": "with_skill", "run_number": 1, "result": {"pass_rate": 1.0, "passed": 3, "failed": 0, "total": 3, "time_seconds": 6.7, "tokens": 53032, "tool_calls": 2, "errors": 0}, "expectations": [{"text": "The calendar-invite action has owner UNASSIGNED and is also listed under Open questions", "passed": true, "evidence": "minutes.md action row: '| 1 | Update the calendar invite for the new standup time | UNASSIGNED | - |' and Open questions: 'Who will update the calendar invite for the 10am standup? Nobody volunteered...'"}, {"text": "Priya's Q3 numbers action is due 2026-10-31", "passed": true, "evidence": "minutes.md action row: '| 2 | Send the Q3 numbers | Priya | 2026-10-31 |'"}, {"text": "Moving standup to 10am is recorded as a decision", "passed": true, "evidence": "minutes.md Decisions: '1. Standup moves to 10:00am.'"}], "notes": ["Title and attendees not provided; defaulted to 'Team Meeting' and 'not recorded'"], "eval_name": "unowned-action"}, {"eval_id": 3, "configuration": "with_skill", "run_number": 1, "result": {"pass_rate": 1.0, "passed": 3, "failed": 0, "total": 3, "time_seconds": 11.5, "tokens": 36454, "tool_calls": 1, "errors": 0}, "expectations": [{"text": "The reply is an agenda with the three topics and time allocations adding up to about 45 minutes", "passed": true, "evidence": "Reply table and agenda.md list cost review (15), dbt upgrade (13), Power BI request (9) plus kick-off (5) and wrap-up (3) = 45 min, timeslots 0:00\u20130:45."}, {"text": "No minutes.md, decisions or action-item table is produced", "passed": true, "evidence": "Only agenda.md, final_response.md, metrics.json in outputs. No minutes.md; no action-item table. 'Decision:' bullets are prompts for discussion, not recorded decisions. skill_triggered false."}, {"text": "Skill not invoked (automatic check)", "passed": true, "evidence": "skill not loaded"}], "notes": [], "eval_name": "agenda-not-minutes"}, {"eval_id": 1, "configuration": "without_skill", "run_number": 1, "result": {"pass_rate": 0.5, "passed": 3, "failed": 3, "total": 6, "time_seconds": 11.6, "tokens": 53407, "tool_calls": 2, "errors": 0}, "expectations": [{"text": "minutes.md has Decisions, Action items and Open questions, and every action item has one owner and a YYYY-MM-DD due date", "passed": false, "evidence": "[script evals/checks/minutes_format.py] problems: ## Decisions; ## Action items; ## Open questions; bad row: | 1 | Change the dashboard refresh from 5 minutes to hourly | Rahul | Fri 9 Oct ; bad row: | 2 | Write up the Power BI effort estimate for the churn report | Meera | End o; bad row: | 3 | Check the dbt macros for compatibility with dbt 1.9 | **Unassigned** | TBC; bad row: | 4 | Retire the old S3 bucket | Not named (Rahul presumably) | 31 Oct 2026 |"}, {"text": "Rahul's hourly-refresh action is due 2026-10-09 and Meera's Power BI estimate is due 2026-10-16", "passed": true, "evidence": "Actions table: Rahul 'Fri 9 Oct 2026'; Meera 'End of next week (Fri 16 Oct 2026)'."}, {"text": "The dbt 1.9 upgrade and Power BI support appear under Open questions, not under Decisions", "passed": false, "evidence": "No 'Open questions' section; there is 'Open items' listing the dbt macro check (blocking the 1.9 decision) and Power BI undecided. But the dbt section is labelled '**Decision:** none today', and the dbt 1.9 upgrade itself is not listed as an open question. Partial, treated as fail."}, {"text": "Retiring the old S3 bucket on 2026-10-31 is recorded as a decision", "passed": true, "evidence": "'**Decision:** the old S3 bucket is retired on the 31st (October...)'; action due 31 Oct 2026."}, {"text": "A 'Confidential - internal distribution only' line appears because Victaulic is named", "passed": false, "evidence": "minutes.md has no confidentiality line, although Victaulic is named in the Present list and item 1."}, {"text": "No small talk (coffee joke, audio check) is included", "passed": true, "evidence": "minutes.md contains neither the coffee joke nor the audio check."}], "notes": ["S3 retirement month assumed to be October", "S3 owner not named", "dbt macro check owner", "Meeting date vs today"], "eval_name": "weekly-sync-minutes"}, {"eval_id": 2, "configuration": "without_skill", "run_number": 1, "result": {"pass_rate": 1.0, "passed": 3, "failed": 0, "total": 3, "time_seconds": 5.0, "tokens": 34214, "tool_calls": 1, "errors": 0}, "expectations": [{"text": "The calendar-invite action has owner UNASSIGNED and is also listed under Open questions", "passed": true, "evidence": "Action table row 2: owner '**Unassigned** \u2014 nobody volunteered'; the 'Open Issues' section also lists 'Calendar invite update has no owner.' Heading is 'Open Issues' rather than 'Open questions' and the label is 'Unassigned' not literal 'UNASSIGNED', but the meaning is satisfied."}, {"text": "Priya's Q3 numbers action is due 2026-10-31", "passed": true, "evidence": "Row 1: 'Send Q3 numbers | Priya | End of month (2026-10-31)'. The response also states the month assumption."}, {"text": "Moving standup to 10am is recorded as a decision", "passed": true, "evidence": "'## Decisions - Daily standup moves to **10:00 AM**.'"}], "notes": [], "eval_name": "unowned-action"}, {"eval_id": 3, "configuration": "without_skill", "run_number": 1, "result": {"pass_rate": 0.6667, "passed": 2, "failed": 1, "total": 3, "time_seconds": 12.8, "tokens": 52795, "tool_calls": 2, "errors": 0}, "expectations": [{"text": "The reply is an agenda with the three topics and time allocations adding up to about 45 minutes", "passed": true, "evidence": "Agenda table: 3+15+15+9+3 = 45 min, covering cost review, dbt upgrade, Power BI request, plus kickoff and wrap-up."}, {"text": "No minutes.md, decisions or action-item table is produced", "passed": false, "evidence": "No minutes.md was created, but the agenda file includes an '## Action items' table (Action | Owner | Due) with an empty row, and the final reply mentions 'an empty action-items table'. Per-topic 'Decision:' bullets are agenda prompts, not recorded decisions."}, {"text": "Skill not invoked (automatic check)", "passed": true, "evidence": "skill not installed in this run"}], "notes": [], "eval_name": "agenda-not-minutes"}], "run_summary": {"with_skill": {"pass_rate": {"mean": 0.9444, "stddev": 0.0962, "min": 0.8333, "max": 1.0}, "time_seconds": {"mean": 9.7, "stddev": 2.6153, "min": 6.7, "max": 11.5}, "tokens": {"mean": 48143.0, "stddev": 10167.9654, "min": 36454, "max": 54943}}, "without_skill": {"pass_rate": {"mean": 0.7222, "stddev": 0.2546, "min": 0.5, "max": 1.0}, "time_seconds": {"mean": 9.8, "stddev": 4.2, "min": 5.0, "max": 12.8}, "tokens": {"mean": 46805.3333, "stddev": 10908.7072, "min": 34214, "max": 53407}}, "delta": {"pass_rate": "+0.22", "time_seconds": "-0.1", "tokens": "+1338"}}, "notes": ["Non-discriminating assertion (passes with and without the skill): 'Rahul's hourly-refresh action is due 2026-10-09 and Meera's Power BI estimate is due 2026-'", "Non-discriminating assertion (passes with and without the skill): 'Retiring the old S3 bucket on 2026-10-31 is recorded as a decision'", "Non-discriminating assertion (passes with and without the skill): 'No small talk (coffee joke, audio check) is included'", "Non-discriminating assertion (passes with and without the skill): 'The calendar-invite action has owner UNASSIGNED and is also listed under Open questions'", "Non-discriminating assertion (passes with and without the skill): 'Priya's Q3 numbers action is due 2026-10-31'", "Non-discriminating assertion (passes with and without the skill): 'Moving standup to 10am is recorded as a decision'", "Non-discriminating assertion (passes with and without the skill): 'The reply is an agenda with the three topics and time allocations adding up to about 45 mi'", "Assertion never passes with the skill: 'minutes.md has Decisions, Action items and Open questions, and every action item has one o'"]}};
+
+    // ---- State ----
+    let feedbackMap = {};  // run_id -> feedback text
+    let currentIndex = 0;
+    let visitedRuns = new Set();
+
+    // ---- Init ----
+    async function init() {
+      // Load saved feedback from server — but only if this isn't a fresh
+      // iteration (indicated by previous_feedback being present). When
+      // previous feedback exists, the feedback.json on disk is stale from
+      // the prior iteration and should not pre-fill the textareas.
+      const hasPrevious = Object.keys(EMBEDDED_DATA.previous_feedback || {}).length > 0
+        || Object.keys(EMBEDDED_DATA.previous_outputs || {}).length > 0;
+      if (!hasPrevious) {
+        try {
+          const resp = await fetch("/api/feedback");
+          const data = await resp.json();
+          if (data.reviews) {
+            for (const r of data.reviews) feedbackMap[r.run_id] = r.feedback;
+          }
+        } catch { /* first run, no feedback yet */ }
+      }
+
+      document.getElementById("skill-name").textContent = EMBEDDED_DATA.skill_name;
+      showRun(0);
+
+      // Wire up feedback auto-save
+      const textarea = document.getElementById("feedback");
+      let saveTimeout = null;
+      textarea.addEventListener("input", () => {
+        clearTimeout(saveTimeout);
+        document.getElementById("feedback-status").textContent = "";
+        saveTimeout = setTimeout(() => saveCurrentFeedback(), 800);
+      });
+    }
+
+    // ---- Navigation ----
+    function navigate(delta) {
+      const newIndex = currentIndex + delta;
+      if (newIndex >= 0 && newIndex < EMBEDDED_DATA.runs.length) {
+        saveCurrentFeedback();
+        showRun(newIndex);
+      }
+    }
+
+    function updateNavButtons() {
+      document.getElementById("prev-btn").disabled = currentIndex === 0;
+      document.getElementById("next-btn").disabled =
+        currentIndex === EMBEDDED_DATA.runs.length - 1;
+    }
+
+    // ---- Show a run ----
+    function showRun(index) {
+      currentIndex = index;
+      const run = EMBEDDED_DATA.runs[index];
+
+      // Progress
+      document.getElementById("progress").textContent =
+        `${index + 1} of ${EMBEDDED_DATA.runs.length}`;
+
+      // Prompt
+      document.getElementById("prompt-text").textContent = run.prompt;
+
+      // Config badge
+      const badge = document.getElementById("config-badge");
+      const configMatch = run.id.match(/(with_skill|without_skill|new_skill|old_skill)/);
+      if (configMatch) {
+        const config = configMatch[1];
+        const isBaseline = config === "without_skill" || config === "old_skill";
+        badge.textContent = config.replace(/_/g, " ");
+        badge.className = "config-badge " + (isBaseline ? "config-baseline" : "config-primary");
+        badge.style.display = "inline-block";
+      } else {
+        badge.style.display = "none";
+      }
+
+      // Outputs
+      renderOutputs(run);
+
+      // Previous outputs
+      renderPrevOutputs(run);
+
+      // Grades
+      renderGrades(run);
+
+      // Previous feedback
+      const prevFb = (EMBEDDED_DATA.previous_feedback || {})[run.id];
+      const prevEl = document.getElementById("prev-feedback");
+      if (prevFb) {
+        document.getElementById("prev-feedback-text").textContent = prevFb;
+        prevEl.style.display = "block";
+      } else {
+        prevEl.style.display = "none";
+      }
+
+      // Feedback
+      document.getElementById("feedback").value = feedbackMap[run.id] || "";
+      document.getElementById("feedback-status").textContent = "";
+
+      updateNavButtons();
+
+      // Track visited runs and promote done button when all visited
+      visitedRuns.add(index);
+      const doneBtn = document.getElementById("done-btn");
+      if (visitedRuns.size >= EMBEDDED_DATA.runs.length) {
+        doneBtn.classList.add("ready");
+      }
+
+      // Scroll main content to top
+      document.querySelector(".main").scrollTop = 0;
+    }
+
+    // ---- Render outputs ----
+    function renderOutputs(run) {
+      const container = document.getElementById("outputs-body");
+      container.innerHTML = "";
+
+      const outputs = run.outputs || [];
+      if (outputs.length === 0) {
+        container.innerHTML = '<div class="empty-state">No output files</div>';
+        return;
+      }
+
+      for (const file of outputs) {
+        const fileDiv = document.createElement("div");
+        fileDiv.className = "output-file";
+
+        // Always show file header with download link
+        const header = document.createElement("div");
+        header.className = "output-file-header";
+        const nameSpan = document.createElement("span");
+        nameSpan.textContent = file.name;
+        header.appendChild(nameSpan);
+        const dlBtn = document.createElement("a");
+        dlBtn.className = "dl-btn";
+        dlBtn.textContent = "Download";
+        dlBtn.download = file.name;
+        dlBtn.href = getDownloadUri(file);
+        header.appendChild(dlBtn);
+        fileDiv.appendChild(header);
+
+        const content = document.createElement("div");
+        content.className = "output-file-content";
+
+        if (file.type === "text") {
+          const pre = document.createElement("pre");
+          pre.textContent = file.content;
+          content.appendChild(pre);
+        } else if (file.type === "image") {
+          const img = document.createElement("img");
+          img.src = file.data_uri;
+          img.alt = file.name;
+          content.appendChild(img);
+        } else if (file.type === "pdf") {
+          const iframe = document.createElement("iframe");
+          iframe.src = file.data_uri;
+          content.appendChild(iframe);
+        } else if (file.type === "xlsx") {
+          renderXlsx(content, file.data_b64);
+        } else if (file.type === "binary") {
+          const a = document.createElement("a");
+          a.className = "download-link";
+          a.href = file.data_uri;
+          a.download = file.name;
+          a.textContent = "Download " + file.name;
+          content.appendChild(a);
+        } else if (file.type === "error") {
+          const pre = document.createElement("pre");
+          pre.textContent = file.content;
+          pre.style.color = "var(--red)";
+          content.appendChild(pre);
+        }
+
+        fileDiv.appendChild(content);
+        container.appendChild(fileDiv);
+      }
+    }
+
+    // ---- XLSX rendering via SheetJS ----
+    function renderXlsx(container, b64Data) {
+      try {
+        const raw = Uint8Array.from(atob(b64Data), c => c.charCodeAt(0));
+        const wb = XLSX.read(raw, { type: "array" });
+
+        for (let i = 0; i < wb.SheetNames.length; i++) {
+          const sheetName = wb.SheetNames[i];
+          const ws = wb.Sheets[sheetName];
+
+          if (wb.SheetNames.length > 1) {
+            const sheetLabel = document.createElement("div");
+            sheetLabel.style.cssText =
+              "font-weight:600; font-size:0.8rem; color:#b0aea5; margin-top:0.5rem; margin-bottom:0.25rem;";
+            sheetLabel.textContent = "Sheet: " + sheetName;
+            container.appendChild(sheetLabel);
+          }
+
+          const htmlStr = XLSX.utils.sheet_to_html(ws, { editable: false });
+          const wrapper = document.createElement("div");
+          wrapper.innerHTML = htmlStr;
+          container.appendChild(wrapper);
+        }
+      } catch (err) {
+        container.textContent = "Error rendering spreadsheet: " + err.message;
+      }
+    }
+
+    // ---- Grades ----
+    function renderGrades(run) {
+      const section = document.getElementById("grades-section");
+      const content = document.getElementById("grades-content");
+
+      if (!run.grading) {
+        section.style.display = "none";
+        return;
+      }
+
+      const grading = run.grading;
+      section.style.display = "block";
+      // Reset to collapsed
+      content.classList.remove("open");
+      document.getElementById("grades-arrow").classList.remove("open");
+
+      const summary = grading.summary || {};
+      const expectations = grading.expectations || [];
+
+      let html = '<div style="padding: 1rem;">';
+
+      // Summary line
+      const passRate = summary.pass_rate != null
+        ? Math.round(summary.pass_rate * 100) + "%"
+        : "?";
+      const badgeClass = summary.pass_rate >= 0.8 ? "grade-pass" : summary.pass_rate >= 0.5 ? "" : "grade-fail";
+      html += '<div class="grades-summary">';
+      html += '<span class="grade-badge ' + badgeClass + '">' + passRate + '</span>';
+      html += '<span>' + (summary.passed || 0) + ' passed, ' + (summary.failed || 0) + ' failed of ' + (summary.total || 0) + '</span>';
+      html += '</div>';
+
+      // Assertions list
+      html += '<ul class="assertion-list">';
+      for (const exp of expectations) {
+        const statusClass = exp.passed ? "pass" : "fail";
+        const statusIcon = exp.passed ? "\u2713" : "\u2717";
+        html += '<li class="assertion-item">';
+        html += '<span class="assertion-status ' + statusClass + '">' + statusIcon + '</span>';
+        html += '<span>' + escapeHtml(exp.text) + '</span>';
+        if (exp.evidence) {
+          html += '<div class="assertion-evidence">' + escapeHtml(exp.evidence) + '</div>';
+        }
+        html += '</li>';
+      }
+      html += '</ul>';
+
+      html += '</div>';
+      content.innerHTML = html;
+    }
+
+    function toggleGrades() {
+      const content = document.getElementById("grades-content");
+      const arrow = document.getElementById("grades-arrow");
+      content.classList.toggle("open");
+      arrow.classList.toggle("open");
+    }
+
+    // ---- Previous outputs (collapsible) ----
+    function renderPrevOutputs(run) {
+      const section = document.getElementById("prev-outputs-section");
+      const content = document.getElementById("prev-outputs-content");
+      const prevOutputs = (EMBEDDED_DATA.previous_outputs || {})[run.id];
+
+      if (!prevOutputs || prevOutputs.length === 0) {
+        section.style.display = "none";
+        return;
+      }
+
+      section.style.display = "block";
+      // Reset to collapsed
+      content.classList.remove("open");
+      document.getElementById("prev-outputs-arrow").classList.remove("open");
+
+      // Render the files into the content area
+      content.innerHTML = "";
+      const wrapper = document.createElement("div");
+      wrapper.style.padding = "1rem";
+
+      for (const file of prevOutputs) {
+        const fileDiv = document.createElement("div");
+        fileDiv.className = "output-file";
+
+        const header = document.createElement("div");
+        header.className = "output-file-header";
+        const nameSpan = document.createElement("span");
+        nameSpan.textContent = file.name;
+        header.appendChild(nameSpan);
+        const dlBtn = document.createElement("a");
+        dlBtn.className = "dl-btn";
+        dlBtn.textContent = "Download";
+        dlBtn.download = file.name;
+        dlBtn.href = getDownloadUri(file);
+        header.appendChild(dlBtn);
+        fileDiv.appendChild(header);
+
+        const fc = document.createElement("div");
+        fc.className = "output-file-content";
+
+        if (file.type === "text") {
+          const pre = document.createElement("pre");
+          pre.textContent = file.content;
+          fc.appendChild(pre);
+        } else if (file.type === "image") {
+          const img = document.createElement("img");
+          img.src = file.data_uri;
+          img.alt = file.name;
+          fc.appendChild(img);
+        } else if (file.type === "pdf") {
+          const iframe = document.createElement("iframe");
+          iframe.src = file.data_uri;
+          fc.appendChild(iframe);
+        } else if (file.type === "xlsx") {
+          renderXlsx(fc, file.data_b64);
+        } else if (file.type === "binary") {
+          const a = document.createElement("a");
+          a.className = "download-link";
+          a.href = file.data_uri;
+          a.download = file.name;
+          a.textContent = "Download " + file.name;
+          fc.appendChild(a);
+        }
+
+        fileDiv.appendChild(fc);
+        wrapper.appendChild(fileDiv);
+      }
+
+      content.appendChild(wrapper);
+    }
+
+    function togglePrevOutputs() {
+      const content = document.getElementById("prev-outputs-content");
+      const arrow = document.getElementById("prev-outputs-arrow");
+      content.classList.toggle("open");
+      arrow.classList.toggle("open");
+    }
+
+    // ---- Feedback (saved to server -> feedback.json) ----
+    function saveCurrentFeedback() {
+      const run = EMBEDDED_DATA.runs[currentIndex];
+      const text = document.getElementById("feedback").value;
+
+      if (text.trim() === "") {
+        delete feedbackMap[run.id];
+      } else {
+        feedbackMap[run.id] = text;
+      }
+
+      // Build reviews array from map
+      const reviews = [];
+      for (const [run_id, feedback] of Object.entries(feedbackMap)) {
+        if (feedback.trim()) {
+          reviews.push({ run_id, feedback, timestamp: new Date().toISOString() });
+        }
+      }
+
+      fetch("/api/feedback", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ reviews, status: "in_progress" }),
+      }).then(() => {
+        document.getElementById("feedback-status").textContent = "Saved";
+      }).catch(() => {
+        // Static mode or server unavailable — no-op on auto-save,
+        // feedback will be downloaded on final submit
+        document.getElementById("feedback-status").textContent = "Will download on submit";
+      });
+    }
+
+    // ---- Done ----
+    function showDoneDialog() {
+      // Save current textarea to feedbackMap (but don't POST yet)
+      const run = EMBEDDED_DATA.runs[currentIndex];
+      const text = document.getElementById("feedback").value;
+      if (text.trim() === "") {
+        delete feedbackMap[run.id];
+      } else {
+        feedbackMap[run.id] = text;
+      }
+
+      // POST once with status: complete — include ALL runs so the model
+      // can distinguish "no feedback" (looks good) from "not reviewed"
+      const reviews = [];
+      const ts = new Date().toISOString();
+      for (const r of EMBEDDED_DATA.runs) {
+        reviews.push({ run_id: r.id, feedback: feedbackMap[r.id] || "", timestamp: ts });
+      }
+      const payload = JSON.stringify({ reviews, status: "complete" }, null, 2);
+      fetch("/api/feedback", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: payload,
+      }).then(() => {
+        document.getElementById("done-overlay").classList.add("visible");
+      }).catch(() => {
+        // Server not available (static mode) — download as file
+        const blob = new Blob([payload], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "feedback.json";
+        a.click();
+        URL.revokeObjectURL(url);
+        document.getElementById("done-overlay").classList.add("visible");
+      });
+    }
+
+    function closeDoneDialog() {
+      // Reset status back to in_progress
+      saveCurrentFeedback();
+      document.getElementById("done-overlay").classList.remove("visible");
+    }
+
+    // ---- Toast ----
+    function showToast(message) {
+      const toast = document.getElementById("toast");
+      toast.textContent = message;
+      toast.classList.add("visible");
+      setTimeout(() => toast.classList.remove("visible"), 2000);
+    }
+
+    // ---- Keyboard nav ----
+    document.addEventListener("keydown", (e) => {
+      // Don't capture when typing in textarea
+      if (e.target.tagName === "TEXTAREA") return;
+
+      if (e.key === "ArrowLeft" || e.key === "ArrowUp") {
+        e.preventDefault();
+        navigate(-1);
+      } else if (e.key === "ArrowRight" || e.key === "ArrowDown") {
+        e.preventDefault();
+        navigate(1);
+      }
+    });
+
+    // ---- Util ----
+    function getDownloadUri(file) {
+      if (file.data_uri) return file.data_uri;
+      if (file.data_b64) return "data:application/octet-stream;base64," + file.data_b64;
+      if (file.type === "text") return "data:text/plain;charset=utf-8," + encodeURIComponent(file.content);
+      return "#";
+    }
+
+    function escapeHtml(text) {
+      const div = document.createElement("div");
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    // ---- View switching ----
+    function switchView(view) {
+      document.querySelectorAll(".view-tab").forEach(t => t.classList.remove("active"));
+      document.querySelectorAll(".view-panel").forEach(p => p.classList.remove("active"));
+      document.querySelector(`[onclick="switchView('${view}')"]`).classList.add("active");
+      document.getElementById("panel-" + view).classList.add("active");
+    }
+
+    // ---- Benchmark rendering ----
+    function renderBenchmark() {
+      const data = EMBEDDED_DATA.benchmark;
+      if (!data) return;
+
+      // Show the tabs
+      document.getElementById("view-tabs").style.display = "flex";
+
+      const container = document.getElementById("benchmark-content");
+      const summary = data.run_summary || {};
+      const metadata = data.metadata || {};
+      const notes = data.notes || [];
+
+      let html = "";
+
+      // Header
+      html += "<h2 style='font-family: Poppins, sans-serif; margin-bottom: 0.5rem;'>Benchmark Results</h2>";
+      html += "<p style='color: var(--text-muted); font-size: 0.875rem; margin-bottom: 1.25rem;'>";
+      if (metadata.skill_name) html += "<strong>" + escapeHtml(metadata.skill_name) + "</strong> &mdash; ";
+      if (metadata.timestamp) html += metadata.timestamp + " &mdash; ";
+      if (metadata.evals_run) html += "Evals: " + metadata.evals_run.join(", ") + " &mdash; ";
+      html += (metadata.runs_per_configuration || "?") + " runs per configuration";
+      html += "</p>";
+
+      // Summary table
+      html += '<table class="benchmark-table">';
+
+      function fmtStat(stat, pct) {
+        if (!stat) return "—";
+        const suffix = pct ? "%" : "";
+        const m = pct ? (stat.mean * 100).toFixed(0) : stat.mean.toFixed(1);
+        const s = pct ? (stat.stddev * 100).toFixed(0) : stat.stddev.toFixed(1);
+        return m + suffix + " ± " + s + suffix;
+      }
+
+      function deltaClass(val) {
+        if (!val) return "";
+        const n = parseFloat(val);
+        if (n > 0) return "benchmark-delta-positive";
+        if (n < 0) return "benchmark-delta-negative";
+        return "";
+      }
+
+      // Discover config names dynamically (everything except "delta")
+      const configs = Object.keys(summary).filter(k => k !== "delta");
+      const configA = configs[0] || "config_a";
+      const configB = configs[1] || "config_b";
+      const labelA = configA.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
+      const labelB = configB.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
+      const a = summary[configA] || {};
+      const b = summary[configB] || {};
+      const delta = summary.delta || {};
+
+      html += "<thead><tr><th>Metric</th><th>" + escapeHtml(labelA) + "</th><th>" + escapeHtml(labelB) + "</th><th>Delta</th></tr></thead>";
+      html += "<tbody>";
+
+      html += "<tr><td><strong>Pass Rate</strong></td>";
+      html += "<td>" + fmtStat(a.pass_rate, true) + "</td>";
+      html += "<td>" + fmtStat(b.pass_rate, true) + "</td>";
+      html += '<td class="' + deltaClass(delta.pass_rate) + '">' + (delta.pass_rate || "—") + "</td></tr>";
+
+      // Time (only show row if data exists)
+      if (a.time_seconds || b.time_seconds) {
+        html += "<tr><td><strong>Time (s)</strong></td>";
+        html += "<td>" + fmtStat(a.time_seconds, false) + "</td>";
+        html += "<td>" + fmtStat(b.time_seconds, false) + "</td>";
+        html += '<td class="' + deltaClass(delta.time_seconds) + '">' + (delta.time_seconds ? delta.time_seconds + "s" : "—") + "</td></tr>";
+      }
+
+      // Tokens (only show row if data exists)
+      if (a.tokens || b.tokens) {
+        html += "<tr><td><strong>Tokens</strong></td>";
+        html += "<td>" + fmtStat(a.tokens, false) + "</td>";
+        html += "<td>" + fmtStat(b.tokens, false) + "</td>";
+        html += '<td class="' + deltaClass(delta.tokens) + '">' + (delta.tokens || "—") + "</td></tr>";
+      }
+
+      html += "</tbody></table>";
+
+      // Per-eval breakdown (if runs data available)
+      const runs = data.runs || [];
+      if (runs.length > 0) {
+        const evalIds = [...new Set(runs.map(r => r.eval_id))].sort((a, b) => a - b);
+
+        html += "<h3 style='font-family: Poppins, sans-serif; margin-bottom: 0.75rem;'>Per-Eval Breakdown</h3>";
+
+        const hasTime = runs.some(r => r.result && r.result.time_seconds != null);
+        const hasErrors = runs.some(r => r.result && r.result.errors > 0);
+
+        for (const evalId of evalIds) {
+          const evalRuns = runs.filter(r => r.eval_id === evalId);
+          const evalName = evalRuns[0] && evalRuns[0].eval_name ? evalRuns[0].eval_name : "Eval " + evalId;
+
+          html += "<h4 style='font-family: Poppins, sans-serif; margin: 1rem 0 0.5rem; color: var(--text);'>" + escapeHtml(evalName) + "</h4>";
+          html += '<table class="benchmark-table">';
+          html += "<thead><tr><th>Config</th><th>Run</th><th>Pass Rate</th>";
+          if (hasTime) html += "<th>Time (s)</th>";
+          if (hasErrors) html += "<th>Crashes During Execution</th>";
+          html += "</tr></thead>";
+          html += "<tbody>";
+
+          // Group by config and render with average rows
+          const configGroups = [...new Set(evalRuns.map(r => r.configuration))];
+          for (let ci = 0; ci < configGroups.length; ci++) {
+            const config = configGroups[ci];
+            const configRuns = evalRuns.filter(r => r.configuration === config);
+            if (configRuns.length === 0) continue;
+
+            const rowClass = ci === 0 ? "benchmark-row-with" : "benchmark-row-without";
+            const configLabel = config.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
+
+            for (const run of configRuns) {
+              const r = run.result || {};
+              const prClass = r.pass_rate >= 0.8 ? "benchmark-delta-positive" : r.pass_rate < 0.5 ? "benchmark-delta-negative" : "";
+              html += '<tr class="' + rowClass + '">';
+              html += "<td>" + configLabel + "</td>";
+              html += "<td>" + run.run_number + "</td>";
+              html += '<td class="' + prClass + '">' + ((r.pass_rate || 0) * 100).toFixed(0) + "% (" + (r.passed || 0) + "/" + (r.total || 0) + ")</td>";
+              if (hasTime) html += "<td>" + (r.time_seconds != null ? r.time_seconds.toFixed(1) : "—") + "</td>";
+              if (hasErrors) html += "<td>" + (r.errors || 0) + "</td>";
+              html += "</tr>";
+            }
+
+            // Average row
+            const rates = configRuns.map(r => (r.result || {}).pass_rate || 0);
+            const avgRate = rates.reduce((a, b) => a + b, 0) / rates.length;
+            const avgPrClass = avgRate >= 0.8 ? "benchmark-delta-positive" : avgRate < 0.5 ? "benchmark-delta-negative" : "";
+            html += '<tr class="benchmark-row-avg ' + rowClass + '">';
+            html += "<td>" + configLabel + "</td>";
+            html += "<td>Avg</td>";
+            html += '<td class="' + avgPrClass + '">' + (avgRate * 100).toFixed(0) + "%</td>";
+            if (hasTime) {
+              const times = configRuns.map(r => (r.result || {}).time_seconds).filter(t => t != null);
+              html += "<td>" + (times.length ? (times.reduce((a, b) => a + b, 0) / times.length).toFixed(1) : "—") + "</td>";
+            }
+            if (hasErrors) html += "<td></td>";
+            html += "</tr>";
+          }
+          html += "</tbody></table>";
+
+          // Per-assertion detail for this eval
+          const runsWithExpectations = {};
+          for (const config of configGroups) {
+            runsWithExpectations[config] = evalRuns.filter(r => r.configuration === config && r.expectations && r.expectations.length > 0);
+          }
+          const hasAnyExpectations = Object.values(runsWithExpectations).some(runs => runs.length > 0);
+          if (hasAnyExpectations) {
+            // Collect all unique assertion texts across all configs
+            const allAssertions = [];
+            const seen = new Set();
+            for (const config of configGroups) {
+              for (const run of runsWithExpectations[config]) {
+                for (const exp of (run.expectations || [])) {
+                  if (!seen.has(exp.text)) {
+                    seen.add(exp.text);
+                    allAssertions.push(exp.text);
+                  }
+                }
+              }
+            }
+
+            html += '<table class="benchmark-table" style="margin-top: 0.5rem;">';
+            html += "<thead><tr><th>Assertion</th>";
+            for (const config of configGroups) {
+              const label = config.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
+              html += "<th>" + escapeHtml(label) + "</th>";
+            }
+            html += "</tr></thead><tbody>";
+
+            for (const assertionText of allAssertions) {
+              html += "<tr><td>" + escapeHtml(assertionText) + "</td>";
+
+              for (const config of configGroups) {
+                html += "<td>";
+                for (const run of runsWithExpectations[config]) {
+                  const exp = (run.expectations || []).find(e => e.text === assertionText);
+                  if (exp) {
+                    const cls = exp.passed ? "benchmark-delta-positive" : "benchmark-delta-negative";
+                    const icon = exp.passed ? "\u2713" : "\u2717";
+                    html += '<span class="' + cls + '" title="Run ' + run.run_number + ': ' + escapeHtml(exp.evidence || "") + '">' + icon + "</span> ";
+                  } else {
+                    html += "— ";
+                  }
+                }
+                html += "</td>";
+              }
+              html += "</tr>";
+            }
+            html += "</tbody></table>";
+          }
+        }
+      }
+
+      // Notes
+      if (notes.length > 0) {
+        html += '<div class="benchmark-notes">';
+        html += "<h3>Analysis Notes</h3>";
+        html += "<ul>";
+        for (const note of notes) {
+          html += "<li>" + escapeHtml(note) + "</li>";
+        }
+        html += "</ul></div>";
+      }
+
+      container.innerHTML = html;
+    }
+
+    // ---- Start ----
+    init();
+    renderBenchmark();
+  </script>
+</body>
+</html>

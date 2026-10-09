@@ -1,0 +1,111 @@
+{
+  "skill_name": "meeting-minutes",
+  "description": "Turns a meeting transcript or rough notes into minutes.md in the team's standard format - attendees, decisions, action items with a named owner and an absolute due date, and open questions. Use this whenever someone asks for minutes, a meeting summary, MoM, action items or follow-ups from a call, transcript or notes. Not for drafting agendas, emails to attendees or summarising documents that are not meetings.",
+  "results": [
+    {
+      "query": "write up the minutes from this call transcript",
+      "should_trigger": true,
+      "trigger_rate": 0.3333333333333333,
+      "triggers": 1,
+      "runs": 3,
+      "pass": false
+    },
+    {
+      "query": "can you pull out the action items and owners from my meeting notes below",
+      "should_trigger": true,
+      "trigger_rate": 0.0,
+      "triggers": 0,
+      "runs": 3,
+      "pass": false
+    },
+    {
+      "query": "MoM for today's client review please, notes attached",
+      "should_trigger": true,
+      "trigger_rate": 0.0,
+      "triggers": 0,
+      "runs": 3,
+      "pass": false
+    },
+    {
+      "query": "summarise this teams meeting recording transcript into decisions and follow-ups",
+      "should_trigger": true,
+      "trigger_rate": 0.0,
+      "triggers": 0,
+      "runs": 3,
+      "pass": false
+    },
+    {
+      "query": "turn these scribbled notes from the steering committee into proper minutes",
+      "should_trigger": true,
+      "trigger_rate": 0.3333333333333333,
+      "triggers": 1,
+      "runs": 3,
+      "pass": false
+    },
+    {
+      "query": "who agreed to do what in yesterday's standup? here's the transcript",
+      "should_trigger": true,
+      "trigger_rate": 0.0,
+      "triggers": 0,
+      "runs": 3,
+      "pass": false
+    },
+    {
+      "query": "draft an agenda for monday's planning meeting",
+      "should_trigger": false,
+      "trigger_rate": 0.0,
+      "triggers": 0,
+      "runs": 3,
+      "pass": true
+    },
+    {
+      "query": "write an email inviting the team to the quarterly review",
+      "should_trigger": false,
+      "trigger_rate": 0.0,
+      "triggers": 0,
+      "runs": 3,
+      "pass": true
+    },
+    {
+      "query": "summarise this 40 page PDF report",
+      "should_trigger": false,
+      "trigger_rate": 0.0,
+      "triggers": 0,
+      "runs": 3,
+      "pass": true
+    },
+    {
+      "query": "find a 30 minute slot next week when Anita and Rahul are both free",
+      "should_trigger": false,
+      "trigger_rate": 0.0,
+      "triggers": 0,
+      "runs": 3,
+      "pass": true
+    },
+    {
+      "query": "how do I run more effective meetings?",
+      "should_trigger": false,
+      "trigger_rate": 0.0,
+      "triggers": 0,
+      "runs": 3,
+      "pass": true
+    },
+    {
+      "query": "turn this transcript of a podcast interview into a blog post",
+      "should_trigger": false,
+      "trigger_rate": 0.0,
+      "triggers": 0,
+      "runs": 3,
+      "pass": true
+    }
+  ],
+  "summary": {
+    "total": 12,
+    "passed": 6,
+    "failed": 6,
+    "accuracy": 0.5,
+    "recall": 0.0,
+    "false_trigger_rate": 0.0
+  },
+  "stderr_tail": "Evaluating: Turns a meeting transcript or rough notes into minutes.md in the team's standard format - attendees, decisions, action items with a named owner and an absolute due date, and open questions. Use this whenever someone asks for minutes, a meeting summary, MoM, action items or follow-ups from a call, transcript or notes. Not for drafting agendas, emails to attendees or summarising documents that are not meetings.\nResults: 6/12 passed\n  [FAIL] rate=1/3 expected=True: write up the minutes from this call transcript\n  [FAIL] rate=0/3 expected=True: can you pull out the action items and owners from my meeting notes bel\n  [FAIL] rate=0/3 expected=True: MoM for today's client review please, notes attached\n  [FAIL] rate=0/3 expected=True: summarise this teams meeting recording transcript into decisions and f\n  [FAIL] rate=1/3 expected=True: turn these scribbled notes from the steering committee into proper min\n  [FAIL] rate=0/3 expected=True: who agreed to do what in yesterday's standup? here's the transcript\n  [PASS] rate=0/3 expected=False: draft an agenda for monday's planning meeting\n  [PASS] rate=0/3 expected=False: write an email inviting the team to the quarterly review\n  [PASS] rate=0/3 expected=False: summarise this 40 page PDF report\n  [PASS] rate=0/3 expected=False: find a 30 minute slot next week when Anita and Rahul are both free\n  [PASS] rate=0/3 expected=False: how do I run more effective meetings?\n  [PASS] rate=0/3 expected=False: turn this transcript of a podcast interview into a blog post\n"
+}

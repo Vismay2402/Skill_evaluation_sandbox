@@ -1,0 +1,53 @@
+{
+  "status": "pass",
+  "pass_rate": 0.9167,
+  "pass_rate_by_model": {
+    "claude-sonnet-5-5": 0.9167
+  },
+  "checks": [
+    {
+      "name": "has_assertions",
+      "status": "pass",
+      "value": 12,
+      "threshold": "> 0"
+    },
+    {
+      "name": "pass_rate",
+      "status": "pass",
+      "value": 0.9167,
+      "threshold": 0.8
+    },
+    {
+      "name": "delta_vs_without_skill",
+      "status": "pass",
+      "value": 0.25,
+      "threshold": 0.0
+    },
+    {
+      "name": "harness_errors",
+      "status": "pass",
+      "value": 0,
+      "threshold": 0
+    },
+    {
+      "name": "trigger_accuracy",
+      "status": "warn",
+      "value": 0.5,
+      "threshold": 0.8
+    }
+  ],
+  "failed": [],
+  "warned": [
+    "trigger_accuracy: description triggering 50% is below 80% - see 'Trigger optimization' for the misfires and a suggested description"
+  ],
+  "warnings": [
+    "Non-discriminating assertion (passes with and without the skill): 'Rahul's hourly-refresh action is due 2026-10-09 and Meera's Power BI estimate is due 2026-'",
+    "Non-discriminating assertion (passes with and without the skill): 'Retiring the old S3 bucket on 2026-10-31 is recorded as a decision'",
+    "Non-discriminating assertion (passes with and without the skill): 'No small talk (coffee joke, audio check) is included'",
+    "Non-discriminating assertion (passes with and without the skill): 'The calendar-invite action has owner UNASSIGNED and is also listed under Open questions'",
+    "Non-discriminating assertion (passes with and without the skill): 'Priya's Q3 numbers action is due 2026-10-31'",
+    "Non-discriminating assertion (passes with and without the skill): 'Moving standup to 10am is recorded as a decision'",
+    "Non-discriminating assertion (passes with and without the skill): 'The reply is an agenda with the three topics and time allocations adding up to about 45 mi'",
+    "Assertion never passes with the skill: 'minutes.md has Decisions, Action items and Open questions, and every action item has one o'"
+  ]
+}

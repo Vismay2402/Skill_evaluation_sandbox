@@ -1,0 +1,72 @@
+{
+  "expectations": [
+    {
+      "text": "The calendar-invite action has owner UNASSIGNED and is also listed under Open questions",
+      "passed": true,
+      "evidence": "Action table row 2: owner '**Unassigned** \u2014 nobody volunteered'; the 'Open Issues' section also lists 'Calendar invite update has no owner.' Heading is 'Open Issues' rather than 'Open questions' and the label is 'Unassigned' not literal 'UNASSIGNED', but the meaning is satisfied."
+    },
+    {
+      "text": "Priya's Q3 numbers action is due 2026-10-31",
+      "passed": true,
+      "evidence": "Row 1: 'Send Q3 numbers | Priya | End of month (2026-10-31)'. The response also states the month assumption."
+    },
+    {
+      "text": "Moving standup to 10am is recorded as a decision",
+      "passed": true,
+      "evidence": "'## Decisions - Daily standup moves to **10:00 AM**.'"
+    }
+  ],
+  "summary": {
+    "passed": 3,
+    "failed": 0,
+    "total": 3,
+    "pass_rate": 1.0
+  },
+  "execution_metrics": {
+    "tool_calls": {
+      "Bash": 1
+    },
+    "total_tool_calls": 1,
+    "total_steps": 2,
+    "files_created": [
+      "meeting-minutes-2026-10-05.md"
+    ],
+    "errors_encountered": 0,
+    "harness_error": false,
+    "harness_error_message": "",
+    "output_chars": 1013,
+    "transcript_chars": 2106,
+    "skill_triggered": null
+  },
+  "claims": [
+    {
+      "claim": "'End of month' means 2026-10-31",
+      "type": "factual",
+      "verified": true,
+      "evidence": "Meeting was 2026-10-05, so October end is 10-31; the assumption was disclosed."
+    },
+    {
+      "claim": "Calendar invite action was left unassigned rather than assigning someone",
+      "type": "process",
+      "verified": true,
+      "evidence": "Output file shows Unassigned owner."
+    }
+  ],
+  "user_notes_summary": {
+    "uncertainties": [],
+    "needs_review": [],
+    "workarounds": []
+  },
+  "eval_feedback": {
+    "suggestions": [
+      {
+        "assertion": "The calendar-invite action has owner UNASSIGNED and is also listed under Open questions",
+        "reason": "The assertion combines two checks and depends on exact wording. A baseline with no skill passes it, so it may not discriminate skill value. Consider checking for the literal token or a defined schema, and that no person was invented as owner."
+      },
+      {
+        "reason": "No assertion checks that the output contains no fabricated attendees, or that the calendar action has no due date invented. Both are the main failure modes for this case."
+      }
+    ],
+    "overall": "Assertions are satisfied by a plain baseline response, so they are weakly discriminating."
+  }
+}

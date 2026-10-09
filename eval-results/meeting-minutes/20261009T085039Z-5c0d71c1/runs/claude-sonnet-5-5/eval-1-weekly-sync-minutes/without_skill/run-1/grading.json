@@ -1,0 +1,99 @@
+{
+  "expectations": [
+    {
+      "text": "minutes.md has Decisions, Action items and Open questions, and every action item has one owner and a YYYY-MM-DD due date",
+      "passed": false,
+      "evidence": "[script evals/checks/minutes_format.py] problems: ## Decisions; ## Action items; ## Open questions; bad row: | 1 | Change the dashboard refresh from 5 minutes to hourly | Rahul | Fri 9 Oct ; bad row: | 2 | Write up the Power BI effort estimate for the churn report | Meera | End o; bad row: | 3 | Check the dbt macros for compatibility with dbt 1.9 | **Unassigned** | TBC; bad row: | 4 | Retire the old S3 bucket | Not named (Rahul presumably) | 31 Oct 2026 |"
+    },
+    {
+      "text": "Rahul's hourly-refresh action is due 2026-10-09 and Meera's Power BI estimate is due 2026-10-16",
+      "passed": true,
+      "evidence": "Actions table: Rahul 'Fri 9 Oct 2026'; Meera 'End of next week (Fri 16 Oct 2026)'."
+    },
+    {
+      "text": "The dbt 1.9 upgrade and Power BI support appear under Open questions, not under Decisions",
+      "passed": false,
+      "evidence": "No 'Open questions' section; there is 'Open items' listing the dbt macro check (blocking the 1.9 decision) and Power BI undecided. But the dbt section is labelled '**Decision:** none today', and the dbt 1.9 upgrade itself is not listed as an open question. Partial, treated as fail."
+    },
+    {
+      "text": "Retiring the old S3 bucket on 2026-10-31 is recorded as a decision",
+      "passed": true,
+      "evidence": "'**Decision:** the old S3 bucket is retired on the 31st (October...)'; action due 31 Oct 2026."
+    },
+    {
+      "text": "A 'Confidential - internal distribution only' line appears because Victaulic is named",
+      "passed": false,
+      "evidence": "minutes.md has no confidentiality line, although Victaulic is named in the Present list and item 1."
+    },
+    {
+      "text": "No small talk (coffee joke, audio check) is included",
+      "passed": true,
+      "evidence": "minutes.md contains neither the coffee joke nor the audio check."
+    }
+  ],
+  "summary": {
+    "passed": 3,
+    "failed": 3,
+    "total": 6,
+    "pass_rate": 0.5
+  },
+  "execution_metrics": {
+    "tool_calls": {
+      "Bash": 2
+    },
+    "total_tool_calls": 2,
+    "total_steps": 3,
+    "files_created": [
+      "minutes.md"
+    ],
+    "errors_encountered": 0,
+    "harness_error": false,
+    "harness_error_message": "",
+    "output_chars": 2715,
+    "transcript_chars": 5034,
+    "skill_triggered": null
+  },
+  "claims": [
+    {
+      "claim": "The dbt macro check was unassigned",
+      "type": "factual",
+      "verified": true,
+      "evidence": "Transcript: Meera says 'Someone needs to check them'; no owner named."
+    },
+    {
+      "claim": "'by this Friday' is 9 Oct",
+      "type": "factual",
+      "verified": true,
+      "evidence": "Meeting Tue 6 Oct 2026, so Friday is 9 Oct."
+    },
+    {
+      "claim": "The S3 month is October",
+      "type": "process",
+      "verified": false,
+      "evidence": "Assumed from context, and flagged as an assumption in the output."
+    }
+  ],
+  "user_notes_summary": {
+    "uncertainties": [
+      "S3 retirement month assumed to be October",
+      "S3 owner not named"
+    ],
+    "needs_review": [
+      "dbt macro check owner",
+      "Meeting date vs today"
+    ],
+    "workarounds": []
+  },
+  "eval_feedback": {
+    "suggestions": [
+      {
+        "assertion": "The dbt 1.9 upgrade and Power BI support appear under Open questions, not under Decisions",
+        "reason": "Ambiguous on heading names; consider accepting equivalents such as 'Open items' and stating whether the macro check or the upgrade itself must be listed."
+      },
+      {
+        "reason": "No assertion checks that the unassigned dbt macro check is flagged, nor that the S3 month assumption is surfaced. Both were handled well here."
+      }
+    ],
+    "overall": "Without the skill, the baseline missed the confidentiality line, which is the discriminating assertion. The date and small-talk checks are easy to pass."
+  }
+}

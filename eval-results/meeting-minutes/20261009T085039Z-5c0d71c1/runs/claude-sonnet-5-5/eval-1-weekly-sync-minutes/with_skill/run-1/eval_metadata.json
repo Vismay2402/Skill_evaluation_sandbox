@@ -1,0 +1,17 @@
+{
+  "eval_id": 1,
+  "eval_name": "weekly-sync-minutes",
+  "prompt": "can you do the minutes from today's data platform sync? transcript is in inputs/transcript.txt. need to send them round this afternoon",
+  "expected_output": "minutes.md: 2 decisions (hourly refresh, retire S3 bucket on 2026-10-31), actions Rahul 2026-10-09 and Meera 2026-10-16, dbt and Power BI as open questions, confidential line",
+  "assertions": [
+    "minutes.md has Decisions, Action items and Open questions, and every action item has one owner and a YYYY-MM-DD due date",
+    "Rahul's hourly-refresh action is due 2026-10-09 and Meera's Power BI estimate is due 2026-10-16",
+    "The dbt 1.9 upgrade and Power BI support appear under Open questions, not under Decisions",
+    "Retiring the old S3 bucket on 2026-10-31 is recorded as a decision",
+    "A 'Confidential - internal distribution only' line appears because Victaulic is named",
+    "No small talk (coffee joke, audio check) is included"
+  ],
+  "type": "standard",
+  "description": "Minutes from a messy transcript",
+  "source": "evals/evals.json"
+}

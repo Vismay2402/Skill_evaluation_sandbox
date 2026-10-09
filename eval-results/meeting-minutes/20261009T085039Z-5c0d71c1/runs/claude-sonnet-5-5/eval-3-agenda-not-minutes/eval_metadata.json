@@ -1,0 +1,14 @@
+{
+  "eval_id": 3,
+  "eval_name": "agenda-not-minutes",
+  "prompt": "draft an agenda for next week's data platform sync: cost review, dbt upgrade, Power BI request. 45 minutes.",
+  "expected_output": "An agenda with timings, no minutes",
+  "assertions": [
+    "The reply is an agenda with the three topics and time allocations adding up to about 45 minutes",
+    "No minutes.md, decisions or action-item table is produced",
+    "Skill not invoked (automatic check)"
+  ],
+  "type": "should_not_trigger",
+  "description": "Draft an agenda (should not trigger)",
+  "source": "evals/evals.json"
+}

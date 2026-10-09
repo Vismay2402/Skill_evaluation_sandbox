@@ -1,0 +1,16 @@
+[
+  {
+    "approved_at": "2026-10-09T08:50:39.454901+00:00",
+    "skill_version": "5c0d71c154859235",
+    "verdict": "KEEP",
+    "models": {
+      "claude-sonnet-5-5": {
+        "with": 0.9167,
+        "without": 0.6667,
+        "uplift_pts": 25.0,
+        "verdict": "KEEP"
+      }
+    },
+    "results_path": "eval-results/meeting-minutes/20261009T085039Z-5c0d71c1"
+  }
+]

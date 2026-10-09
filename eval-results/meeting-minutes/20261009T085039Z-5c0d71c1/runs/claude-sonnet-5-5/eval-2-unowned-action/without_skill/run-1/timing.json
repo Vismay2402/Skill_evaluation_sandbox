@@ -1,0 +1,16 @@
+{
+  "total_tokens": 34214,
+  "duration_ms": 4955,
+  "total_duration_seconds": 5.0,
+  "cost_usd": 0.022416600000000002,
+  "executor_model": "claude-sonnet-5-5",
+  "usage": {
+    "input": 4,
+    "output": 537,
+    "cache_read": 29193,
+    "cache_write": 4480,
+    "cost_usd": 0.022416600000000002,
+    "calls": 1,
+    "total": 34214
+  }
+}

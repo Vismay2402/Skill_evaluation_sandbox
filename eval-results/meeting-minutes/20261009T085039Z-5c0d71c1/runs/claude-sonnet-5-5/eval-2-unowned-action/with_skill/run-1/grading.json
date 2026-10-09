@@ -1,0 +1,75 @@
+{
+  "expectations": [
+    {
+      "text": "The calendar-invite action has owner UNASSIGNED and is also listed under Open questions",
+      "passed": true,
+      "evidence": "minutes.md action row: '| 1 | Update the calendar invite for the new standup time | UNASSIGNED | - |' and Open questions: 'Who will update the calendar invite for the 10am standup? Nobody volunteered...'"
+    },
+    {
+      "text": "Priya's Q3 numbers action is due 2026-10-31",
+      "passed": true,
+      "evidence": "minutes.md action row: '| 2 | Send the Q3 numbers | Priya | 2026-10-31 |'"
+    },
+    {
+      "text": "Moving standup to 10am is recorded as a decision",
+      "passed": true,
+      "evidence": "minutes.md Decisions: '1. Standup moves to 10:00am.'"
+    }
+  ],
+  "summary": {
+    "passed": 3,
+    "failed": 0,
+    "total": 3,
+    "pass_rate": 1.0
+  },
+  "execution_metrics": {
+    "tool_calls": {
+      "Skill": 1,
+      "Write": 1
+    },
+    "total_tool_calls": 2,
+    "total_steps": 4,
+    "files_created": [
+      "minutes.md"
+    ],
+    "errors_encountered": 0,
+    "harness_error": false,
+    "harness_error_message": "",
+    "output_chars": 1053,
+    "transcript_chars": 2669,
+    "skill_triggered": true
+  },
+  "claims": [
+    {
+      "claim": "'End of month' was interpreted as end of October (2026-10-31)",
+      "type": "factual",
+      "verified": true,
+      "evidence": "Meeting on 2026-10-05; due date 2026-10-31 is correct for that interpretation"
+    },
+    {
+      "claim": "The calendar invite item is also listed under Open questions",
+      "type": "process",
+      "verified": true,
+      "evidence": "Present in the Open questions section of minutes.md"
+    }
+  ],
+  "user_notes_summary": {
+    "uncertainties": [],
+    "needs_review": [
+      "Title and attendees not provided; defaulted to 'Team Meeting' and 'not recorded'"
+    ],
+    "workarounds": []
+  },
+  "eval_feedback": {
+    "suggestions": [
+      {
+        "assertion": "The calendar-invite action has owner UNASSIGNED and is also listed under Open questions",
+        "reason": "Doesn't check that the unowned item isn't assigned to a guessed person, or that the due date is left blank instead of invented. A check that no invented attendee or owner appears would be more discriminating."
+      },
+      {
+        "reason": "No assertion covers fabrication of title/attendees; the output used 'Team Meeting' as a title, which was invented but flagged."
+      }
+    ],
+    "overall": "Assertions cover the key behaviors but are fairly easy to satisfy; add checks against hallucinated owners, dates, and attendees."
+  }
+}

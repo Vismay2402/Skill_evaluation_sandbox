@@ -1,0 +1,72 @@
+{
+  "by_run_config": {
+    "claude-sonnet-5-5|with_skill": {
+      "input": 16,
+      "output": 3625,
+      "cache_read": 123379,
+      "cache_write": 17409,
+      "total": 144429,
+      "cost_usd": 0.10448,
+      "calls": 3
+    },
+    "claude-sonnet-5-5|without_skill": {
+      "input": 16,
+      "output": 3462,
+      "cache_read": 121477,
+      "cache_write": 15461,
+      "total": 140416,
+      "cost_usd": 0.0976,
+      "calls": 3
+    }
+  },
+  "by_stage": {
+    "Skill runs (executor)": {
+      "input": 32,
+      "output": 7087,
+      "cache_read": 244856,
+      "cache_write": 32870,
+      "total": 284845,
+      "cost_usd": 0.20208,
+      "calls": 6
+    },
+    "Grading (grader agent)": {
+      "input": 40,
+      "output": 10908,
+      "cache_read": 380473,
+      "cache_write": 71176,
+      "total": 462597,
+      "cost_usd": 0.363195,
+      "calls": 6
+    },
+    "Blind A/B comparison (comparator agent)": {
+      "input": 12,
+      "output": 3085,
+      "cache_read": 107412,
+      "cache_write": 19789,
+      "total": 130298,
+      "cost_usd": 0.101829,
+      "calls": 2
+    },
+    "Analysis (analyzer agent)": {
+      "input": 8,
+      "output": 3220,
+      "cache_read": 86159,
+      "cache_write": 17972,
+      "total": 107359,
+      "cost_usd": 0.094378,
+      "calls": 1
+    }
+  },
+  "total": {
+    "input": 92,
+    "output": 24300,
+    "cache_read": 818900,
+    "cache_write": 141807,
+    "total": 985099,
+    "cost_usd": 0.761482,
+    "calls": 15
+  },
+  "not_metered": [
+    "Trigger evals (run_eval.py streams events and stops early; usage is not reported)"
+  ]
+}

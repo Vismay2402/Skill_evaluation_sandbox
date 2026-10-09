@@ -1,0 +1,14 @@
+{
+  "eval_id": 2,
+  "eval_name": "unowned-action",
+  "prompt": "minutes please, meeting was Monday 2026-10-05: we agreed to move standup to 10am. someone needs to update the calendar invite but nobody volunteered. Priya will send the Q3 numbers end of month.",
+  "expected_output": "Calendar action UNASSIGNED and listed under open questions; Priya due 2026-10-31",
+  "assertions": [
+    "The calendar-invite action has owner UNASSIGNED and is also listed under Open questions",
+    "Priya's Q3 numbers action is due 2026-10-31",
+    "Moving standup to 10am is recorded as a decision"
+  ],
+  "type": "edge",
+  "description": "Action nobody took",
+  "source": "evals/evals.json"
+}

@@ -1,0 +1,324 @@
+{
+  "metadata": {
+    "skill_name": "meeting-minutes",
+    "skill_path": "/home/runner/work/Skill_evaluation_sandbox/Skill_evaluation_sandbox/skills/meeting-minutes",
+    "executor_model": "claude-sonnet-5-5",
+    "analyzer_model": "claude-sonnet-5-5",
+    "timestamp": "2026-10-09T08:48:47Z",
+    "evals_run": [
+      1,
+      2,
+      3
+    ],
+    "runs_per_configuration": 1,
+    "grader_model": "claude-sonnet-5-5",
+    "configurations": [
+      "with_skill",
+      "without_skill"
+    ],
+    "harness_error_runs": 0,
+    "skill_runs_where_skill_not_loaded": 0
+  },
+  "runs": [
+    {
+      "eval_id": 1,
+      "configuration": "with_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 0.8333,
+        "passed": 5,
+        "failed": 1,
+        "total": 6,
+        "time_seconds": 10.9,
+        "tokens": 54943,
+        "tool_calls": 3,
+        "errors": 0
+      },
+      "expectations": [
+        {
+          "text": "minutes.md has Decisions, Action items and Open questions, and every action item has one owner and a YYYY-MM-DD due date",
+          "passed": false,
+          "evidence": "[script evals/checks/minutes_format.py] problems: bad row: | 3 | Check the existing dbt macros for compatibility with dbt 1.9 | UNASSIGNED"
+        },
+        {
+          "text": "Rahul's hourly-refresh action is due 2026-10-09 and Meera's Power BI estimate is due 2026-10-16",
+          "passed": true,
+          "evidence": "minutes.md action table: Rahul 'Change the dashboard refresh to hourly' due 2026-10-09; Meera 'Write up the Power BI effort estimate' due 2026-10-16. Meeting Tue 2026-10-06, so Friday = 10-09 and end of next week = 10-16."
+        },
+        {
+          "text": "The dbt 1.9 upgrade and Power BI support appear under Open questions, not under Decisions",
+          "passed": true,
+          "evidence": "Open questions lists 'Upgrade to dbt 1.9?' and 'Add the churn report to Power BI...'. Decisions contains only the hourly refresh and S3 retirement."
+        },
+        {
+          "text": "Retiring the old S3 bucket on 2026-10-31 is recorded as a decision",
+          "passed": true,
+          "evidence": "Decisions item 2: 'The old S3 bucket will be retired on 2026-10-31 (previously agreed, reconfirmed).'"
+        },
+        {
+          "text": "A 'Confidential - internal distribution only' line appears because Victaulic is named",
+          "passed": true,
+          "evidence": "minutes.md line 2: 'Confidential - internal distribution only'; Victaulic is named in the attendees line, and the final response explains this."
+        },
+        {
+          "text": "No small talk (coffee joke, audio check) is included",
+          "passed": true,
+          "evidence": "No mention of the audio check or coffee in minutes.md. The final response mentions the coffee joke only to say it was left out."
+        }
+      ],
+      "notes": [
+        "dbt macro check is unassigned and needs an owner before sending"
+      ],
+      "eval_name": "weekly-sync-minutes"
+    },
+    {
+      "eval_id": 2,
+      "configuration": "with_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 1.0,
+        "passed": 3,
+        "failed": 0,
+        "total": 3,
+        "time_seconds": 6.7,
+        "tokens": 53032,
+        "tool_calls": 2,
+        "errors": 0
+      },
+      "expectations": [
+        {
+          "text": "The calendar-invite action has owner UNASSIGNED and is also listed under Open questions",
+          "passed": true,
+          "evidence": "minutes.md action row: '| 1 | Update the calendar invite for the new standup time | UNASSIGNED | - |' and Open questions: 'Who will update the calendar invite for the 10am standup? Nobody volunteered...'"
+        },
+        {
+          "text": "Priya's Q3 numbers action is due 2026-10-31",
+          "passed": true,
+          "evidence": "minutes.md action row: '| 2 | Send the Q3 numbers | Priya | 2026-10-31 |'"
+        },
+        {
+          "text": "Moving standup to 10am is recorded as a decision",
+          "passed": true,
+          "evidence": "minutes.md Decisions: '1. Standup moves to 10:00am.'"
+        }
+      ],
+      "notes": [
+        "Title and attendees not provided; defaulted to 'Team Meeting' and 'not recorded'"
+      ],
+      "eval_name": "unowned-action"
+    },
+    {
+      "eval_id": 3,
+      "configuration": "with_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 1.0,
+        "passed": 3,
+        "failed": 0,
+        "total": 3,
+        "time_seconds": 11.5,
+        "tokens": 36454,
+        "tool_calls": 1,
+        "errors": 0
+      },
+      "expectations": [
+        {
+          "text": "The reply is an agenda with the three topics and time allocations adding up to about 45 minutes",
+          "passed": true,
+          "evidence": "Reply table and agenda.md list cost review (15), dbt upgrade (13), Power BI request (9) plus kick-off (5) and wrap-up (3) = 45 min, timeslots 0:00\u20130:45."
+        },
+        {
+          "text": "No minutes.md, decisions or action-item table is produced",
+          "passed": true,
+          "evidence": "Only agenda.md, final_response.md, metrics.json in outputs. No minutes.md; no action-item table. 'Decision:' bullets are prompts for discussion, not recorded decisions. skill_triggered false."
+        },
+        {
+          "text": "Skill not invoked (automatic check)",
+          "passed": true,
+          "evidence": "skill not loaded"
+        }
+      ],
+      "notes": [],
+      "eval_name": "agenda-not-minutes"
+    },
+    {
+      "eval_id": 1,
+      "configuration": "without_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 0.5,
+        "passed": 3,
+        "failed": 3,
+        "total": 6,
+        "time_seconds": 11.6,
+        "tokens": 53407,
+        "tool_calls": 2,
+        "errors": 0
+      },
+      "expectations": [
+        {
+          "text": "minutes.md has Decisions, Action items and Open questions, and every action item has one owner and a YYYY-MM-DD due date",
+          "passed": false,
+          "evidence": "[script evals/checks/minutes_format.py] problems: ## Decisions; ## Action items; ## Open questions; bad row: | 1 | Change the dashboard refresh from 5 minutes to hourly | Rahul | Fri 9 Oct ; bad row: | 2 | Write up the Power BI effort estimate for the churn report | Meera | End o; bad row: | 3 | Check the dbt macros for compatibility with dbt 1.9 | **Unassigned** | TBC; bad row: | 4 | Retire the old S3 bucket | Not named (Rahul presumably) | 31 Oct 2026 |"
+        },
+        {
+          "text": "Rahul's hourly-refresh action is due 2026-10-09 and Meera's Power BI estimate is due 2026-10-16",
+          "passed": true,
+          "evidence": "Actions table: Rahul 'Fri 9 Oct 2026'; Meera 'End of next week (Fri 16 Oct 2026)'."
+        },
+        {
+          "text": "The dbt 1.9 upgrade and Power BI support appear under Open questions, not under Decisions",
+          "passed": false,
+          "evidence": "No 'Open questions' section; there is 'Open items' listing the dbt macro check (blocking the 1.9 decision) and Power BI undecided. But the dbt section is labelled '**Decision:** none today', and the dbt 1.9 upgrade itself is not listed as an open question. Partial, treated as fail."
+        },
+        {
+          "text": "Retiring the old S3 bucket on 2026-10-31 is recorded as a decision",
+          "passed": true,
+          "evidence": "'**Decision:** the old S3 bucket is retired on the 31st (October...)'; action due 31 Oct 2026."
+        },
+        {
+          "text": "A 'Confidential - internal distribution only' line appears because Victaulic is named",
+          "passed": false,
+          "evidence": "minutes.md has no confidentiality line, although Victaulic is named in the Present list and item 1."
+        },
+        {
+          "text": "No small talk (coffee joke, audio check) is included",
+          "passed": true,
+          "evidence": "minutes.md contains neither the coffee joke nor the audio check."
+        }
+      ],
+      "notes": [
+        "S3 retirement month assumed to be October",
+        "S3 owner not named",
+        "dbt macro check owner",
+        "Meeting date vs today"
+      ],
+      "eval_name": "weekly-sync-minutes"
+    },
+    {
+      "eval_id": 2,
+      "configuration": "without_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 1.0,
+        "passed": 3,
+        "failed": 0,
+        "total": 3,
+        "time_seconds": 5.0,
+        "tokens": 34214,
+        "tool_calls": 1,
+        "errors": 0
+      },
+      "expectations": [
+        {
+          "text": "The calendar-invite action has owner UNASSIGNED and is also listed under Open questions",
+          "passed": true,
+          "evidence": "Action table row 2: owner '**Unassigned** \u2014 nobody volunteered'; the 'Open Issues' section also lists 'Calendar invite update has no owner.' Heading is 'Open Issues' rather than 'Open questions' and the label is 'Unassigned' not literal 'UNASSIGNED', but the meaning is satisfied."
+        },
+        {
+          "text": "Priya's Q3 numbers action is due 2026-10-31",
+          "passed": true,
+          "evidence": "Row 1: 'Send Q3 numbers | Priya | End of month (2026-10-31)'. The response also states the month assumption."
+        },
+        {
+          "text": "Moving standup to 10am is recorded as a decision",
+          "passed": true,
+          "evidence": "'## Decisions - Daily standup moves to **10:00 AM**.'"
+        }
+      ],
+      "notes": [],
+      "eval_name": "unowned-action"
+    },
+    {
+      "eval_id": 3,
+      "configuration": "without_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 0.6667,
+        "passed": 2,
+        "failed": 1,
+        "total": 3,
+        "time_seconds": 12.8,
+        "tokens": 52795,
+        "tool_calls": 2,
+        "errors": 0
+      },
+      "expectations": [
+        {
+          "text": "The reply is an agenda with the three topics and time allocations adding up to about 45 minutes",
+          "passed": true,
+          "evidence": "Agenda table: 3+15+15+9+3 = 45 min, covering cost review, dbt upgrade, Power BI request, plus kickoff and wrap-up."
+        },
+        {
+          "text": "No minutes.md, decisions or action-item table is produced",
+          "passed": false,
+          "evidence": "No minutes.md was created, but the agenda file includes an '## Action items' table (Action | Owner | Due) with an empty row, and the final reply mentions 'an empty action-items table'. Per-topic 'Decision:' bullets are agenda prompts, not recorded decisions."
+        },
+        {
+          "text": "Skill not invoked (automatic check)",
+          "passed": true,
+          "evidence": "skill not installed in this run"
+        }
+      ],
+      "notes": [],
+      "eval_name": "agenda-not-minutes"
+    }
+  ],
+  "run_summary": {
+    "with_skill": {
+      "pass_rate": {
+        "mean": 0.9444,
+        "stddev": 0.0962,
+        "min": 0.8333,
+        "max": 1.0
+      },
+      "time_seconds": {
+        "mean": 9.7,
+        "stddev": 2.6153,
+        "min": 6.7,
+        "max": 11.5
+      },
+      "tokens": {
+        "mean": 48143.0,
+        "stddev": 10167.9654,
+        "min": 36454,
+        "max": 54943
+      }
+    },
+    "without_skill": {
+      "pass_rate": {
+        "mean": 0.7222,
+        "stddev": 0.2546,
+        "min": 0.5,
+        "max": 1.0
+      },
+      "time_seconds": {
+        "mean": 9.8,
+        "stddev": 4.2,
+        "min": 5.0,
+        "max": 12.8
+      },
+      "tokens": {
+        "mean": 46805.3333,
+        "stddev": 10908.7072,
+        "min": 34214,
+        "max": 53407
+      }
+    },
+    "delta": {
+      "pass_rate": "+0.22",
+      "time_seconds": "-0.1",
+      "tokens": "+1338"
+    }
+  },
+  "notes": [
+    "Non-discriminating assertion (passes with and without the skill): 'Rahul's hourly-refresh action is due 2026-10-09 and Meera's Power BI estimate is due 2026-'",
+    "Non-discriminating assertion (passes with and without the skill): 'Retiring the old S3 bucket on 2026-10-31 is recorded as a decision'",
+    "Non-discriminating assertion (passes with and without the skill): 'No small talk (coffee joke, audio check) is included'",
+    "Non-discriminating assertion (passes with and without the skill): 'The calendar-invite action has owner UNASSIGNED and is also listed under Open questions'",
+    "Non-discriminating assertion (passes with and without the skill): 'Priya's Q3 numbers action is due 2026-10-31'",
+    "Non-discriminating assertion (passes with and without the skill): 'Moving standup to 10am is recorded as a decision'",
+    "Non-discriminating assertion (passes with and without the skill): 'The reply is an agenda with the three topics and time allocations adding up to about 45 mi'",
+    "Assertion never passes with the skill: 'minutes.md has Decisions, Action items and Open questions, and every action item has one o'"
+  ]
+}
