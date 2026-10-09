@@ -1,0 +1,148 @@
+name: Skill evaluation scheduler
+
+# Runs daily and costs nothing unless something is due. It:
+#  1. finds skills that are DUE (frequency in skilleval.config.yaml -> schedule.every_days, skills changed
+#     since approval, skills never evaluated on a model in execution.models),
+#  2. checks the Models API for newly released Claude models and opens one issue per new model listing
+#     the skills to re-evaluate on it,
+#  3. keeps one "Skills due for evaluation" issue up to date (closed automatically when nothing is due),
+#     and posts to SKILL_EVAL_WEBHOOK_URL (Slack / Teams) if that secret is set,
+#  4. if schedule.auto_run is true, starts the Skill evaluation workflow for the due skills
+#     (baseline without_skill, so each gets a usefulness verdict) - results still need human approval.
+#
+# Change the frequency in skilleval.config.yaml, not here: this cron only decides how often to CHECK.
+
+on:
+  schedule:
+    - cron: "23 2 * * *"       # daily 02:23 UTC (07:53 IST)
+  workflow_dispatch:
+    inputs:
+      run_due_now:
+        description: "Start evaluations for the due skills now (ignores schedule.auto_run)"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+  issues: write
+  actions: write
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      GH_TOKEN: ${{ github.token }}
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      CLAUDE_CODE_USE_BEDROCK: ${{ vars.CLAUDE_CODE_USE_BEDROCK }}
+      AWS_REGION: ${{ vars.AWS_REGION }}
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      SKILL_EVAL_WEBHOOK_URL: ${{ secrets.SKILL_EVAL_WEBHOOK_URL }}
+      RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+      EVAL_URL: ${{ github.server_url }}/${{ github.repository }}/actions/workflows/skill-eval.yml
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - run: pip install -r requirements.txt
+
+      - name: Read schedule settings
+        id: cfg
+        run: |
+          python - <<'PY' >> "$GITHUB_OUTPUT"
+          from skilleval.config import load_config
+          s = load_config().get("schedule", {})
+          print(f"auto_run={'true' if s.get('auto_run') else 'false'}")
+          print(f"watch={'true' if s.get('watch_new_models', True) else 'false'}")
+          print(f"limit={int(s.get('max_skills_per_run', 10))}")
+          print(f"notify={' '.join('@' + u for u in s.get('notify', []))}")
+          print(f"assignees={','.join(s.get('notify', []))}")
+          PY
+
+      - name: New Claude models
+        id: models
+        if: steps.cfg.outputs.watch == 'true'
+        run: |
+          set +e
+          python -m skilleval models-check --json > new_models.json 2> models.err
+          if [ $? -ne 0 ]; then
+            echo "::warning::Could not list models: $(tail -c 300 models.err)"; echo "ids=" >> "$GITHUB_OUTPUT"; exit 0
+          fi
+          set -e
+          IDS=""
+          for ID in $(python -c "import json; print(' '.join(m['id'] for m in json.load(open('new_models.json'))))"); do
+            TITLE="New Claude model available: $ID"
+            if [ -n "$(gh issue list --state all --search "\"$TITLE\" in:title" --json number --jq '.[0].number')" ]; then
+              continue   # already announced
+            fi
+            IDS="$IDS,$ID"
+            {
+              echo "**$ID** is now available ${{ steps.cfg.outputs.notify }}."
+              echo
+              echo "Skills that have not been evaluated on it yet:"
+              echo
+              python -m skilleval due --models "$ID" | grep -F "$ID" || echo "- none"
+              echo
+              echo "**Is each skill still needed on the new model?** Evaluate them against no skill:"
+              echo "[Run workflow]($EVAL_URL) → skills \`all\` → model \`other\` → model_other \`$ID\` (or \`claude-sonnet-5-5,$ID\` to compare) → baseline \`without_skill\`."
+              echo
+              echo "To make it a default model, add it to \`execution.models\` in \`skilleval.config.yaml\`; the scheduler then lists every skill not yet evaluated on it until it is."
+            } > model_issue.md
+            gh issue create --title "$TITLE" --body-file model_issue.md \
+              ${{ steps.cfg.outputs.assignees != '' && format('--assignee {0}', steps.cfg.outputs.assignees) || '' }} \
+              || gh issue create --title "$TITLE" --body-file model_issue.md
+            python -c "from skilleval.schedule import webhook; webhook('New Claude model $ID is available - skills need re-evaluation: $RUN_URL')"
+          done
+          echo "ids=${IDS#,}" >> "$GITHUB_OUTPUT"
+
+      - name: Skills due for evaluation
+        id: due
+        run: |
+          python -m skilleval due > due.md
+          NAMES=$(python -m skilleval due --names --limit ${{ steps.cfg.outputs.limit }})
+          echo "names=$NAMES" >> "$GITHUB_OUTPUT"
+          cat due.md >> "$GITHUB_STEP_SUMMARY"
+          TITLE="Skills due for evaluation"
+          NUM=$(gh issue list --state open --search "\"$TITLE\" in:title" --json number --jq '.[0].number')
+          if [ -z "$NAMES" ]; then
+            [ -n "$NUM" ] && gh issue close "$NUM" --comment "Nothing is due any more - closed by the scheduler."
+            exit 0
+          fi
+          {
+            echo "These skills need an evaluation ${{ steps.cfg.outputs.notify }} (updated $(date -u +%Y-%m-%d)):"
+            echo
+            cat due.md
+            echo
+            if [ "${{ steps.cfg.outputs.auto_run }}" = "true" ] || [ "${{ inputs.run_due_now }}" = "true" ]; then
+              echo "The scheduler started an evaluation for: \`$NAMES\`. Approve the results in the run's **human-review** step."
+            else
+              echo "**To evaluate:** [Run workflow]($EVAL_URL) → skills \`$NAMES\` → baseline \`without_skill\`."
+              echo "Set \`schedule.auto_run: true\` in skilleval.config.yaml to start these automatically."
+            fi
+          } > due_issue.md
+          if [ -n "$NUM" ]; then
+            gh issue edit "$NUM" --body-file due_issue.md
+          else
+            gh issue create --title "$TITLE" --body-file due_issue.md \
+              ${{ steps.cfg.outputs.assignees != '' && format('--assignee {0}', steps.cfg.outputs.assignees) || '' }} \
+              || gh issue create --title "$TITLE" --body-file due_issue.md
+            python -c "from skilleval.schedule import webhook; webhook('Skills due for evaluation: $NAMES - $RUN_URL')"
+          fi
+
+      - name: Start evaluations
+        if: steps.due.outputs.names != '' && (steps.cfg.outputs.auto_run == 'true' || inputs.run_due_now)
+        run: |
+          gh workflow run skill-eval.yml --ref "${{ github.ref_name }}" \
+            -f skills="${{ steps.due.outputs.names }}" -f baseline=without_skill -f runs_per_config=1
+          echo "Started Skill evaluation for: ${{ steps.due.outputs.names }}" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Evaluate skills on newly released models
+        if: steps.models.outputs.ids != '' && (steps.cfg.outputs.auto_run == 'true' || inputs.run_due_now)
+        run: |
+          NAMES=$(python -m skilleval due --models "${{ steps.models.outputs.ids }}" --names --limit ${{ steps.cfg.outputs.limit }})
+          [ -z "$NAMES" ] && exit 0
+          gh workflow run skill-eval.yml --ref "${{ github.ref_name }}" -f skills="$NAMES" \
+            -f model="other (type below)" -f model_other="${{ steps.models.outputs.ids }}" \
+            -f baseline=without_skill -f runs_per_config=1
+          echo "Started Skill evaluation on ${{ steps.models.outputs.ids }} for: $NAMES" >> "$GITHUB_STEP_SUMMARY"

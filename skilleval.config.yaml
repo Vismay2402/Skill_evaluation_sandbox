@@ -9,8 +9,9 @@ execution:
   executor: claude-code       # claude-code (headless `claude -p`) | mock (dry run, no API calls)
   # Models that run the skill, ordered from least to most capable. Every eval runs with and
   # without the skill on each one - this is what shows whether newer models still need the skill.
-  models: [claude-haiku-5-5, claude-sonnet-5-5]   # sandbox: cheaper models
-  grader_model: claude-opus-5-5   # grades checks and writes the report narrative
+  models: [claude-sonnet-5-5]  # default; pick others per run in the Run workflow form
+  grader_model: claude-sonnet-5-5 # grades checks, judges the blind A/B and writes the narrative
+                                  # (Sonnet halves grading cost vs Opus; use Opus for high-stakes approvals)
   runs_per_config: 1          # sandbox: 1 run (use 3 for real approvals)
   max_parallel: 4             # concurrent claude -p processes
   run_timeout_seconds: 900
@@ -34,6 +35,16 @@ comparison:
   model: null                 # judge; default = execution.grader_model
   include_should_not_trigger: false
   timeout_seconds: 900
+
+schedule:
+  # A daily lightweight check (.github/workflows/skill-eval-scheduler.yml) decides which skills are DUE;
+  # it costs nothing on days with nothing due. Per-skill override in skills/<name>/evals/eval-config.yaml.
+  every_days: 30              # re-evaluate each skill at least this often
+  auto_run: false             # true = start the evaluation automatically; false = only notify (issue)
+  max_skills_per_run: 10      # cost cap for automatic runs
+  watch_new_models: true      # notify when Anthropic releases a model no skill has been evaluated on
+  models_known_before: "2026-10-09"   # models released before this date are not announced as new
+  notify: [Vismay2402]        # GitHub users assigned to / mentioned in the notification issues
 
 targets:
   # Skills 2.0 pass-rate targets for "re-run until the threshold is met". Set skill_kind per skill in

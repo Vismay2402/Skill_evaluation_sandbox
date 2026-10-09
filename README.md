@@ -11,7 +11,7 @@ on several models and tracking that uplift across model releases.
 
 ```mermaid
 flowchart LR
-  A[PR touching skills/**<br/>Run workflow button<br/>monthly review] --> B{evals.json<br/>present?}
+  A[PR touching skills/**<br/>Run workflow button<br/>scheduler: due / new model] --> B{evals.json<br/>present?}
   B -- no --> C[Claude drafts evals<br/>pushes to PR for review] --> A
   B -- yes --> D[Validate]
   D --> E[Run evals headless<br/>with_skill vs baseline × N runs]
@@ -98,10 +98,7 @@ it drops by 10+ pts for a model compared with the last approved evaluation.
 your organisation knows) will not be absorbed by model upgrades; value from `quality` and `behavior` usually
 is. Tag checks with a `category` in `evals.json`; the analyst categorises any you leave out.
 
-**Monthly usefulness review:** on the 1st of every month the workflow re-runs every skill against no skill
-on the models in `skilleval.config.yaml`, opens a GitHub issue for any skill whose verdict changed or became
-RETIRE CANDIDATE / HARMFUL, and sends the results to human review as usual. When a new model ships, add it
-to `execution.models` (least to most capable) or pass it in the Run workflow form.
+**Scheduled re-evaluation and new-model alerts:** see [Scheduling and notifications](#scheduling-and-notifications).
 
 ### evals.json fields used by the report
 
@@ -120,6 +117,48 @@ to `execution.models` (least to most capable) or pass it in the Run workflow for
 
 `type` is one of standard, edge, ambiguous, review, complex, should_not_trigger. A `should_not_trigger`
 case automatically gets a "Skill not invoked" check read from the run's tool calls.
+
+## Scheduling and notifications
+
+`.github/workflows/skill-eval-scheduler.yml` runs **daily** (a few seconds, no model calls unless something
+runs). The **frequency is set in `skilleval.config.yaml` → `schedule`**, not in the cron:
+
+```yaml
+schedule:
+  every_days: 30          # re-evaluate each skill at least this often (override per skill in evals/eval-config.yaml)
+  auto_run: false         # false = notify only; true = also start the evaluation (results still need approval)
+  max_skills_per_run: 10  # cost cap for automatic runs
+  watch_new_models: true  # alert when Anthropic releases a model
+  notify: [Vismay2402]    # assigned to the issues -> GitHub emails them
+```
+
+Each day it:
+
+1. Lists skills that are **due**: never approved, changed since approval, older than `every_days`, or never
+   evaluated on a model in `execution.models` (so adding a model there flags every skill).
+2. Asks the Models API (or Bedrock) for **newly released Claude models** and opens one issue per model -
+   *"New Claude model available: …"* - listing the skills to re-evaluate, with the exact Run workflow settings.
+3. Keeps one **"Skills due for evaluation"** issue up to date and closes it when nothing is due.
+4. Posts to Slack/Teams if the secret `SKILL_EVAL_WEBHOOK_URL` is set (Slack incoming webhook, or a Teams
+   / Power Automate flow that accepts `{"text": ...}`).
+5. If `auto_run: true` (or you run the scheduler with *run_due_now*), starts the evaluations itself -
+   `without_skill` baseline, so each gets a usefulness verdict - and they wait for human approval as usual.
+
+GitHub emails issue assignees and repo watchers, so the issues are the notification.
+
+## Where should skills live?
+
+- **Recommended: one central skills repo** (this one) for every skill you distribute. It is the single place
+  for review, evaluation history, the approval gate and the registry. Give each team its own folders and a
+  `CODEOWNERS` entry (e.g. `skills/finance-* @org/finance-ai`) so the right people approve their skills.
+- **Skills that must live elsewhere** (inside a product repo or a plugin): keep them there for development,
+  but publish released versions into the central repo (a PR that copies the folder) - that is what gets
+  evaluated, approved and distributed. Alternatively copy `skilleval/`, the config and `.github/` into that
+  repo; the pipeline only needs a `skills/` folder.
+- **Third-party skills you are considering** (Anthropic's, community ones): add them to the central repo
+  under `skills/` with an eval set and run them through the same gate before anyone in the org uses them.
+- One folder per skill, `SKILL.md` at its root, evals in `evals/`. Client-confidential skills or test data
+  belong in a private repo.
 
 ## Your own test cases
 
@@ -160,13 +199,17 @@ registry/skills-registry.json           current approved version, pass rate, ver
 skilleval/                              the pipeline (CLI: python -m skilleval)
 skilleval/vendor/skill_creator/         vendored skill-creator tooling (Apache 2.0)
 test-cases/                             your own test-case files + templates (CSV / JSON)
-skilleval.config.yaml                   models, runs, parallelism, gate thresholds, A/B comparison, targets
+docs/MANUAL_EVALUATION.md               running an evaluation by hand (GitHub form, laptop, or no tooling)
+.github/workflows/skill-eval.yml        the evaluation + human gate
+.github/workflows/skill-eval-scheduler.yml  daily due-check, new-model alerts, optional auto-run
+skilleval.config.yaml                   models, runs, schedule, gate thresholds, A/B comparison, targets
 ```
 
 ## One-time setup (GitHub)
 
 1. Push this folder to a repo (or copy `skilleval/`, the config and `.github/` into an existing skills repo).
-2. **Secrets** (Settings → Secrets and variables → Actions): `ANTHROPIC_API_KEY`.
+2. **Secrets** (Settings → Secrets and variables → Actions): `ANTHROPIC_API_KEY`; optionally
+   `SKILL_EVAL_WEBHOOK_URL` for Slack/Teams notifications.
    For Amazon Bedrock instead: variable `CLAUDE_CODE_USE_BEDROCK=1`, variable `AWS_REGION`, secrets
    `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY`, and set Bedrock model IDs in `skilleval.config.yaml`.
 3. **Human gate**: Settings → Environments → New environment `skill-eval-approval` → tick
@@ -191,8 +234,10 @@ skilleval.config.yaml                   models, runs, parallelism, gate threshol
 - On approval the results commit lands in the same PR, so the skill and its evidence merge together.
 
 **Re-evaluate any skill (a few clicks)** - Actions → *Skill evaluation* → *Run workflow*: enter skill names
-or `all`, optionally a model list, runs and baseline (`without_skill` for a usefulness verdict). Useful after
-a model upgrade. Approved results arrive as a PR.
+or `all`, pick the **model** from the dropdown (default **Sonnet 5.5**; combinations or `other` for any model
+id), the **grader model**, runs, baseline (`without_skill` for a usefulness verdict), and optionally paste
+your own **test cases**. Approved results arrive as a PR. Step-by-step (and how to evaluate without any
+automation): [docs/MANUAL_EVALUATION.md](docs/MANUAL_EVALUATION.md).
 
 **Dry run of the whole flow at zero cost** - choose executor `mock`.
 

@@ -92,11 +92,11 @@ def target_for(cfg: dict) -> tuple[str, float]:
 
 
 def rebenchmark(cfg: dict, last_approved: dict | None) -> dict:
-    days = int(cfg.get("targets", {}).get("rebenchmark_days", 90))
+    days = int(cfg.get("schedule", {}).get("every_days") or cfg.get("targets", {}).get("rebenchmark_days", 90))
     now = datetime.now(timezone.utc)
     return {"last_approved": (last_approved or {}).get("approved_at", "")[:10] or None,
             "next_due": (now + timedelta(days=days)).strftime("%Y-%m-%d"), "every_days": days,
-            "when": ["after a model update (add the model to execution.models, or the monthly review)",
+            "when": ["when a new model is released (the daily scheduler opens an issue listing the skills)",
                      "after significant edits to the skill (pull requests touching skills/ run automatically)",
                      f"at least every {days} days"]}
 
@@ -180,6 +180,6 @@ def steps(ctx: dict) -> list[dict]:
     rows.append({"stage": "Maintain", "step": "Version in git with results",
                  "component": "human gate -> eval-results/, history.json, registry",
                  "result": f"skill version {ctx['version'][:12]}; stored after approval", "status": "pending"})
-    rows.append({"stage": "Maintain", "step": "Re-benchmark", "component": "monthly review / PR trigger",
+    rows.append({"stage": "Maintain", "step": "Re-benchmark", "component": "daily scheduler (due / new model) + PR trigger",
                  "result": f"next due {ctx['rebench']['next_due']}", "status": "scheduled"})
     return rows

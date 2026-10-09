@@ -3,8 +3,9 @@ name: Skill evaluation
 # Three ways in:
 #  1. Automatic - a pull request that adds or changes anything under skills/
 #  2. Manual    - Actions tab -> "Skill evaluation" -> Run workflow (pick skills, models, runs)
-#  3. Scheduled - monthly usefulness review of every skill on the current models: is each skill
-#                 still worth having as models improve? Opens an issue when a verdict changes.
+#  3. Scheduled - .github/workflows/skill-eval-scheduler.yml checks daily which skills are due
+#                 (frequency in skilleval.config.yaml -> schedule) or not yet evaluated on a new model,
+#                 notifies, and (if schedule.auto_run) starts this workflow for just those skills.
 #
 # Flow: evaluate (runs on every model + grading + benchmark + verdict + report.pdf + gate)
 #       -> human-review (GitHub Environment with required reviewers = the human gate)
@@ -13,18 +14,34 @@ name: Skill evaluation
 on:
   pull_request:
     paths: ["skills/**"]
-  # schedule:                # monthly usefulness review - disabled in the sandbox to avoid cost
-  #   - cron: "17 3 1 * *"
   workflow_dispatch:
     inputs:
       skills:
         description: 'Skills to evaluate: comma-separated folder names, or "all"'
         required: true
         default: all
-      models:
-        description: "Models, comma-separated, least to most capable (blank = skilleval.config.yaml)"
+      model:
+        description: "Model(s) that run the skill (each is compared with and without the skill)"
+        type: choice
+        options:
+          - claude-sonnet-5-5
+          - claude-haiku-5-5
+          - claude-opus-5-5
+          - claude-fable-5-1
+          - claude-haiku-5-5,claude-sonnet-5-5
+          - claude-sonnet-5-5,claude-opus-5-5
+          - claude-haiku-5-5,claude-sonnet-5-5,claude-opus-5-5
+          - other (type below)
+        default: claude-sonnet-5-5
+      model_other:
+        description: "Only if model = other: model id(s), comma-separated, least to most capable (e.g. a newly released model)"
         required: false
         default: ""
+      grader_model:
+        description: "Model that grades the checks, judges the blind A/B and writes the report narrative"
+        type: choice
+        options: [claude-sonnet-5-5, claude-opus-5-5, claude-haiku-5-5]
+        default: claude-sonnet-5-5
       runs_per_config:
         description: Repeats per eval per configuration
         type: choice
@@ -37,6 +54,10 @@ on:
         default: auto
       trigger_evals:
         description: Also test description triggering
+        type: boolean
+        default: true
+      ab_comparison:
+        description: "Blind A/B comparison (comparator agent, win rate). Off = cheaper trial run"
         type: boolean
         default: true
       allow_failed_gate:
@@ -72,7 +93,7 @@ env:
   WORKSPACE: skilleval-workspace
   HEAD_REF: ${{ github.head_ref }}
   SKILLS_INPUT: ${{ inputs.skills }}
-  MODELS_INPUT: ${{ inputs.models }}
+  MODELS_INPUT: ${{ inputs.model == 'other (type below)' && inputs.model_other || inputs.model }}
   TEST_CASES_INPUT: ${{ inputs.test_cases }}
   BASE_REF: ${{ github.event_name == 'pull_request' && format('origin/{0}', github.base_ref) || format('origin/{0}', github.event.repository.default_branch || 'main') }}
 
@@ -208,6 +229,8 @@ jobs:
             OPTS="$OPTS --runs ${{ inputs.runs_per_config }} --baseline ${{ inputs.baseline }} --executor ${{ inputs.executor }}"
             [ -n "$MODELS_INPUT" ] && OPTS="$OPTS --models $(echo "$MODELS_INPUT" | tr -cd 'a-z0-9.,-')"
             [ "${{ inputs.trigger_evals }}" = "false" ] && OPTS="$OPTS --no-trigger"
+            [ "${{ inputs.ab_comparison }}" = "false" ] && OPTS="$OPTS --no-compare"
+            OPTS="$OPTS --grader-model ${{ inputs.grader_model }}"
             [ -n "${{ steps.cases.outputs.file }}" ] && OPTS="$OPTS --test-cases ${{ steps.cases.outputs.file }} --test-cases-mode ${{ inputs.test_cases_mode }}"
           fi
           # The usefulness review always compares against no skill at all.
@@ -315,7 +338,7 @@ jobs:
             BRANCH="skill-eval/results-${{ github.run_id }}"
             git push origin HEAD:"$BRANCH"
             gh pr create --base "${{ github.ref_name }}" --head "$BRANCH" \
-              --title "Skill eval results (${{ github.event_name == 'schedule' && 'monthly usefulness review' || format('run {0}', github.run_id) }}) approved by $APPROVER" \
+              --title "Skill eval results (${{ format('run {0}', github.run_id) }}) approved by $APPROVER" \
               --body-file "$WORKSPACE/SUMMARY.md"
           fi
           echo "Approved by **$APPROVER** - results committed." >> "$GITHUB_STEP_SUMMARY"

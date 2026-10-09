@@ -115,7 +115,8 @@ def cmd_draft_evals(args, cfg):
 def cmd_run(args, cfg_unused):
     overrides = {"execution": {k: v for k, v in {
         "executor": args.executor, "models": args.models, "runs_per_config": args.runs,
-        "baseline": args.baseline, "max_parallel": args.parallel}.items() if v is not None}}
+        "baseline": args.baseline, "max_parallel": args.parallel,
+        "grader_model": args.grader_model}.items() if v is not None}}
     if args.no_trigger:
         overrides["trigger_eval"] = {"enabled": False}
     if args.no_compare:
@@ -260,6 +261,30 @@ def cmd_changes(args, cfg):
     print(out or "No verdict changes.")
 
 
+def cmd_due(args, cfg):
+    """Skills that need an evaluation now (frequency, changes, models they were never evaluated on)."""
+    from .schedule import due_skills
+    extra = [m.strip() for m in (args.models or "").split(",") if m.strip()]
+    items = due_skills(extra)
+    if args.json:
+        print(json.dumps(items, indent=2))
+        return
+    if args.names:
+        print(",".join(i["skill"] for i in (items[:args.limit] if args.limit else items)))
+        return
+    lines = [f"- **`{i['skill']}`** ({i['verdict'] or 'not approved'}, last approved {i['last_approved'] or 'never'}): "
+             + "; ".join(i["reasons"]) for i in items]
+    print("\n".join(lines) if lines else "No skills are due.")
+
+
+def cmd_models_check(args, cfg):
+    """Newly released Claude models (Anthropic Models API or Bedrock)."""
+    from .schedule import new_models
+    items = new_models(args.since)
+    print(json.dumps(items, indent=2) if args.json else
+          ("\n".join(f"{m['id']}  ({m['name']}, released {m['released']})" for m in items) or "No new models."))
+
+
 def main():
     p = argparse.ArgumentParser(prog="skilleval")
     p.add_argument("--config", default=None)
@@ -280,6 +305,7 @@ def main():
     r.add_argument("--executor", choices=["claude-code", "mock"])
     r.add_argument("--models", help="comma-separated, least to most capable (default: config)")
     r.add_argument("--runs", type=int); r.add_argument("--parallel", type=int)
+    r.add_argument("--grader-model", help="model that grades, judges A/B and writes the narrative")
     r.add_argument("--baseline", choices=["auto", "without_skill", "old_skill", "none"])
     r.add_argument("--evals", type=int, nargs="*", help="only these eval ids")
     r.add_argument("--allow-failed-gate", action="store_true")
@@ -295,6 +321,12 @@ def main():
     im.add_argument("--mode", choices=["replace", "append"], default="append")
     ch = sub.add_parser("changes", help="verdict changes / retire candidates in a workspace")
     ch.add_argument("--workspace", default="skilleval-workspace"); ch.add_argument("--output")
+    du = sub.add_parser("due", help="skills that need an evaluation now")
+    du.add_argument("--json", action="store_true"); du.add_argument("--names", action="store_true")
+    du.add_argument("--models", help="also count these models (e.g. newly released) as required")
+    du.add_argument("--limit", type=int, default=0)
+    mc = sub.add_parser("models-check", help="Claude models released since schedule.models_known_before")
+    mc.add_argument("--since"); mc.add_argument("--json", action="store_true")
     pb = sub.add_parser("publish")
     pb.add_argument("--workspace", default="skilleval-workspace")
     pb.add_argument("--approver", required=True); pb.add_argument("--note"); pb.add_argument("--run-url")
@@ -303,7 +335,8 @@ def main():
     args = p.parse_args()
     cfg = load_config(config_path=Path(args.config) if args.config else None)
     {"list": cmd_list, "changed": cmd_changed, "validate": cmd_validate, "draft-evals": cmd_draft_evals,
-     "run": cmd_run, "publish": cmd_publish, "import-cases": cmd_import_cases, "verify": cmd_verify,
+     "run": cmd_run, "publish": cmd_publish, "import-cases": cmd_import_cases,
+     "due": cmd_due, "models-check": cmd_models_check, "verify": cmd_verify,
      "changes": cmd_changes}[args.cmd](args, cfg)
 
 

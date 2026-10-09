@@ -42,7 +42,11 @@ def publish(run_out: Path, results_dir: Path, registry_file: Path, approver: str
     verdict = json.loads((run_out / "verdict.json").read_text()) if (run_out / "verdict.json").exists() else {}
     from .verdict import history_entry
     per_model = history_entry(verdict)
-    latest = {"skill": m["skill"], "skill_version": m["skill_version"], "pass_rate": m["pass_rate"],
+    prev_file = results_dir / m["skill"] / "latest.json"
+    prev = json.loads(prev_file.read_text()) if prev_file.exists() else {}
+    evaluated = set(m["models"]) | (set(prev.get("evaluated_models", []))
+                                    if prev.get("skill_version") == m["skill_version"] else set())
+    latest = {"skill": m["skill"], "evaluated_models": sorted(evaluated), "skill_version": m["skill_version"], "pass_rate": m["pass_rate"],
               "gate_status": gate["status"], "model": m["model"], "models": per_model,
               "verdict": verdict.get("overall"), "approved_by": approver,
               "approved_at": now.isoformat(), "results_path": str(dest.relative_to(REPO_ROOT))}

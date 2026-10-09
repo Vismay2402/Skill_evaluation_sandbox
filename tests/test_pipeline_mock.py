@@ -41,7 +41,8 @@ def test_run_produces_skill_creator_artifacts(tmp_path):
     status = json.loads((ws / "status.json").read_text())
     assert status["evaluated"] == ["csv-data-profiler"]
     usage = json.loads((out / "usage.json").read_text())
-    assert usage["total"]["total"] > 0 and usage["by_stage"]["Grading (grader agent)"]["calls"] == 3 * 2 * 2 * 2
+    assert usage["total"]["total"] > 0 and usage["by_stage"]["Grading (grader agent)"]["calls"] == \
+        3 * 2 * 2 * len(json.loads((out / "run.json").read_text())["models"])
     comp = json.loads((out / "comparison.json").read_text())
     assert all(v["interpretation"] in {"KEEP", "REFINE", "REMOVE OR REWRITE"} for v in comp["by_model"].values())
     summary = (out / "summary.md").read_text()
@@ -78,3 +79,21 @@ def test_verdict_rules():
     assert d([1] * 10, [1] * 10) == "RETIRE CANDIDATE"
     assert d([0] + [1] * 9, [1] * 10) == "HARMFUL"
     assert d([1] * 10, [0] * 1 + [1] * 9) == "KEEP, SLIM DOWN"   # +10 pts
+
+
+def test_due_skills(tmp_path, monkeypatch):
+    from skilleval import schedule
+    from skilleval.discover import tree_hash
+    import skilleval.schedule as sch
+    res = tmp_path / "eval-results"
+    (res / "csv-data-profiler").mkdir(parents=True)
+    (res / "csv-data-profiler" / "latest.json").write_text(json.dumps({
+        "skill_version": tree_hash(ROOT / "skills" / "csv-data-profiler"), "approved_at": "2099-01-01T00:00:00+00:00",
+        "evaluated_models": ["claude-sonnet-5-5"], "verdict": "KEEP"}))
+    real = sch.load_config
+    monkeypatch.setattr(sch, "load_config", lambda *a, **k: {**real(*a, **k), "results_dir": str(res)})
+    due = {d["skill"]: d["reasons"] for d in schedule.due_skills()}
+    assert "csv-data-profiler" not in due            # fresh, unchanged, evaluated on the default model
+    assert "never evaluated and approved" in due["incident-postmortem"]
+    due = {d["skill"]: d["reasons"] for d in schedule.due_skills(["claude-opus-6"])}
+    assert due["csv-data-profiler"] == ["not yet evaluated on claude-opus-6"]
