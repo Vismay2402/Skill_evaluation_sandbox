@@ -11,6 +11,12 @@ name: Skill evaluation
 #       -> human-review (GitHub Environment with required reviewers = the human gate)
 #       -> on approval, results, report and history are committed to git
 
+run-name: >-
+  ${{ github.event_name == 'pull_request' && format('Skill eval: PR #{0} {1}', github.event.pull_request.number, github.event.pull_request.title)
+  || format('Skill eval: {0} on {1}{2}', (inputs.skill == 'several (type below)' && inputs.skills_other || inputs.skill),
+     (inputs.model == 'other (type below)' && inputs.model_other || inputs.model),
+     (inputs.executor == 'mock' && ' (dry run)' || '')) }}
+
 on:
   pull_request:
     paths: ["skills/**"]
@@ -75,6 +81,10 @@ on:
         description: "Blind A/B comparison (comparator agent, win rate). Off = cheaper trial run"
         type: boolean
         default: true
+      reviewer_email:
+        description: "Email the results to these reviewers (comma-separated; blank = review.notify_emails in skilleval.config.yaml)"
+        required: false
+        default: ""
       allow_failed_gate:
         description: Send to human review even if the automated gate fails (the reviewer sees why it failed)
         type: boolean
@@ -110,6 +120,13 @@ env:
   SKILLS_INPUT: ${{ inputs.skill == 'several (type below)' && inputs.skills_other || inputs.skill }}
   MODELS_INPUT: ${{ inputs.model == 'other (type below)' && inputs.model_other || inputs.model }}
   TEST_CASES_INPUT: ${{ inputs.test_cases }}
+  REVIEWER_EMAIL: ${{ inputs.reviewer_email }}
+  SMTP_HOST: ${{ secrets.SMTP_HOST }}
+  SMTP_PORT: ${{ secrets.SMTP_PORT }}
+  SMTP_USERNAME: ${{ secrets.SMTP_USERNAME }}
+  SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
+  SMTP_FROM: ${{ secrets.SMTP_FROM }}
+  RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
   BASE_REF: ${{ github.event_name == 'pull_request' && format('origin/{0}', github.base_ref) || format('origin/{0}', github.event.repository.default_branch || 'main') }}
 
 jobs:
@@ -300,6 +317,10 @@ jobs:
           gh pr comment ${{ github.event.pull_request.number }} --body-file comment.md --edit-last --create-if-none \
             || gh pr comment ${{ github.event.pull_request.number }} --body-file comment.md
 
+      - name: Email reviewers (results waiting for approval)
+        if: steps.run.outputs.has_results == 'true' && (steps.run.outputs.gate_failed != 'true' || inputs.allow_failed_gate)
+        run: python -m skilleval notify-review --workspace "$WORKSPACE" --to "$REVIEWER_EMAIL" --run-url "$RUN_URL" --repo "${{ github.repository }}"
+
       - name: Explain the automated gate
         if: steps.run.outputs.gate_failed == 'true'
         run: |
@@ -352,7 +373,12 @@ jobs:
                        --jq '[.[] | select(.state=="approved")][-1].user.login' 2>/dev/null || true)
           COMMENT=$(gh api "repos/${{ github.repository }}/actions/runs/${{ github.run_id }}/approvals" \
                        --jq '[.[] | select(.state=="approved")][-1].comment' 2>/dev/null || true)
-          APPROVER=${APPROVER:-${{ github.triggering_actor }}}
+          if [ -z "$APPROVER" ] || [ "$APPROVER" = "null" ]; then
+            # Nobody approved: the environment has no required reviewers, so GitHub let the job straight through.
+            echo "::warning::No approval was recorded - the skill-eval-approval environment has no required reviewers. Add them under Settings -> Environments -> skill-eval-approval so this step waits for a person."
+            APPROVER="${{ github.triggering_actor }} (unreviewed - no required reviewers set)"
+            COMMENT="Stored without a human approval: the environment has no required reviewers."
+          fi
           git config user.name "skill-eval-bot"; git config user.email "skill-eval-bot@users.noreply.github.com"
           INCLUDE=""
           [ "${{ needs.evaluate.outputs.gate_failed }}" = "true" ] && INCLUDE="--include-failed"
@@ -371,3 +397,6 @@ jobs:
               --body-file "$WORKSPACE/SUMMARY.md"
           fi
           echo "Approved by **$APPROVER** - results committed." >> "$GITHUB_STEP_SUMMARY"
+          PR_URL=$(gh pr list --head "skill-eval/results-${{ github.run_id }}" --json url --jq '.[0].url' 2>/dev/null || true)
+          python -m skilleval notify-review --workspace "$WORKSPACE" --to "$REVIEWER_EMAIL" --run-url "$RUN_URL" \
+            --repo "${{ github.repository }}" --kind approved --approver "$APPROVER" --pr-url "$PR_URL"

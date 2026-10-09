@@ -74,8 +74,10 @@ def publish(run_out: Path, results_dir: Path, registry_file: Path, approver: str
     reg["updated_at"] = now.isoformat()
     registry_file.write_text(json.dumps(reg, indent=2, sort_keys=True))
 
+    from .catalog import write_all
+    index = write_all()   # EVALUATIONS.md + eval-results/<skill>/EVALUATIONS.md (count and timestamps)
     if commit:
-        subprocess.run(["git", "add", str(dest), str(results_dir / m["skill"]), str(registry_file)],
+        subprocess.run(["git", "add", str(dest), str(results_dir / m["skill"]), str(registry_file), str(index)],
                        cwd=REPO_ROOT, check=True)
         msg = (f"eval({m['skill']}): approve {m['skill_version'][:8]} at {m['pass_rate']:.0%} pass rate"
                f" - verdict {verdict.get('overall', 'n/a')}\n\n"

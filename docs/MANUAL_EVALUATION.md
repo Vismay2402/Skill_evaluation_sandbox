@@ -21,6 +21,7 @@ test prompts, objective checks, and a comparison **with vs without** the skill.
    | **ab_comparison** | on = blind A/B judge and win rate; off = cheaper trial run |
    | **test_cases** | optional - your own prompts: a repo path (`test-cases/my-cases.csv`) **or paste CSV/JSON** (see [test-cases/README.md](../test-cases/README.md)) |
    | **test_cases_mode** | `replace` = only your cases; `append` = the skill's cases + yours |
+   | **reviewer_email** | optional - email these people the results and report.pdf (needs the SMTP secrets) |
    | **allow_failed_gate** | tick to send results to review even if the automatic gate fails |
    | **executor** | `mock` = free dry run of the whole flow with fake results |
 
@@ -28,8 +29,10 @@ test prompts, objective checks, and a comparison **with vs without** the skill.
    Skills 2.0 steps, A/B win rate, token usage, per-case results, failures, trigger results, test cases.
 4. Download the **skill-eval-…** artifact for `<skill>/report.pdf` (the full report) and `review.html`
    (every output and grade).
-5. **Human gate:** on the run page, **Review deployments → skill-eval-approval → Approve** (add a comment -
-   it is stored with the results) or **Reject**.
+5. **Human gate:** the run pauses at **human-review** (only if required reviewers are set on the
+   `skill-eval-approval` environment). Reviewers get a GitHub notification (and an email with the report if
+   SMTP is set up). On the run page click **Review deployments** → tick **skill-eval-approval** → add a
+   comment (stored with the results) → **Approve and deploy** or **Reject**.
 6. On approval a pull request with the results opens (`eval-results/<skill>/…`, registry, history). Merge it.
 
 ## B. From your laptop (same pipeline, no GitHub)
