@@ -27,7 +27,41 @@ def _age_days(iso: str | None) -> int | None:
     return (datetime.now(timezone.utc) - t).days
 
 
-def due_skills(extra_models: list[str] | None = None) -> list[dict]:
+def _gh(path: str):
+    p = subprocess.run(["gh", "api", path], capture_output=True, text=True, timeout=60)
+    if p.returncode != 0:
+        raise RuntimeError(p.stderr[-300:])
+    return json.loads(p.stdout)
+
+
+def pending_results(repo: str | None = None) -> dict:
+    """Approved results that sit in open results PRs (approved, not merged yet): {skill: {pr, version, url}}.
+    Uses the GitHub REST API via `gh`; returns {} when gh or the API is not available."""
+    repo = repo or os.environ.get("GITHUB_REPOSITORY")
+    if not repo:
+        return {}
+    import base64
+    out = {}
+    try:
+        for pr in _gh(f"repos/{repo}/pulls?state=open&per_page=50"):
+            files = _gh(f"repos/{repo}/pulls/{pr['number']}/files?per_page=100")
+            for f in files:
+                parts = f["filename"].split("/")
+                if len(parts) == 3 and parts[0] == "eval-results" and parts[2] == "latest.json":
+                    c = _gh(f"repos/{repo}/contents/{f['filename']}?ref={pr['head']['ref']}")
+                    latest = json.loads(base64.b64decode(c["content"]))
+                    out[parts[1]] = {"pr": pr["number"], "url": pr["html_url"],
+                                     "version": latest.get("skill_version"),
+                                     "approved_at": latest.get("approved_at", ""),
+                                     "models": latest.get("evaluated_models") or [latest.get("model")]}
+    except Exception as e:  # never break the scheduler on API problems
+        print(f"[skilleval] could not check open results PRs: {e}")
+    return out
+
+
+def due_skills(extra_models: list[str] | None = None, pending: dict | None = None) -> list[dict]:
+    """Skills needing an evaluation. Skills whose approved results wait in an open PR for the current
+    version are returned with due=False and a note, so they are reported but not re-run."""
     base = load_config()
     skills_dir, results_dir = REPO_ROOT / base["skills_dir"], REPO_ROOT / base["results_dir"]
     out = []
@@ -38,10 +72,20 @@ def due_skills(extra_models: list[str] | None = None) -> list[dict]:
         latest_f = results_dir / s / "latest.json"
         latest = json.loads(latest_f.read_text()) if latest_f.exists() else None
         reasons = []
+        pend = (pending or {}).get(s)
+        current = tree_hash(skills_dir / s)
+        if pend and pend.get("version") == current:
+            missing = [m for m in list(cfg["execution"]["models"]) + list(extra_models or [])
+                       if m not in (pend.get("models") or [])]
+            out.append({"skill": s, "due": bool(missing), "last_approved": pend["approved_at"][:10],
+                        "verdict": None, "reasons": [f"approved results are waiting to be merged in PR #{pend['pr']}"]
+                        + (["not yet evaluated on " + ", ".join(dict.fromkeys(missing))] if missing else []),
+                        "pr": pend["pr"]})
+            continue
         if not latest:
-            reasons.append("never evaluated and approved")
+            reasons.append("no approved evaluation on the main branch yet")
         else:
-            if latest.get("skill_version") != tree_hash(skills_dir / s):
+            if latest.get("skill_version") != current:
                 reasons.append("skill changed since its approved evaluation")
             age = _age_days(latest.get("approved_at"))
             if age is not None and age >= every:
@@ -51,7 +95,7 @@ def due_skills(extra_models: list[str] | None = None) -> list[dict]:
             if missing:
                 reasons.append("not yet evaluated on " + ", ".join(dict.fromkeys(missing)))
         if reasons:
-            out.append({"skill": s, "reasons": reasons, "last_approved": (latest or {}).get("approved_at", "")[:10],
+            out.append({"skill": s, "due": True, "reasons": reasons, "last_approved": (latest or {}).get("approved_at", "")[:10],
                         "verdict": (latest or {}).get("verdict")})
     return out
 

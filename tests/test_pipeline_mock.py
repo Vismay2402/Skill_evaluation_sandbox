@@ -94,6 +94,12 @@ def test_due_skills(tmp_path, monkeypatch):
     monkeypatch.setattr(sch, "load_config", lambda *a, **k: {**real(*a, **k), "results_dir": str(res)})
     due = {d["skill"]: d["reasons"] for d in schedule.due_skills()}
     assert "csv-data-profiler" not in due            # fresh, unchanged, evaluated on the default model
-    assert "never evaluated and approved" in due["incident-postmortem"]
+    assert "no approved evaluation on the main branch yet" in due["incident-postmortem"]
     due = {d["skill"]: d["reasons"] for d in schedule.due_skills(["claude-opus-6"])}
     assert due["csv-data-profiler"] == ["not yet evaluated on claude-opus-6"]
+
+    pending = {"incident-postmortem": {"pr": 7, "url": "", "approved_at": "2026-10-09T00:00:00",
+                                       "version": tree_hash(ROOT / "skills" / "incident-postmortem"),
+                                       "models": ["claude-sonnet-5-5"]}}
+    item = next(d for d in schedule.due_skills(None, pending) if d["skill"] == "incident-postmortem")
+    assert item["due"] is False and "PR #7" in item["reasons"][0]

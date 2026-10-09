@@ -262,19 +262,25 @@ def cmd_changes(args, cfg):
 
 
 def cmd_due(args, cfg):
-    """Skills that need an evaluation now (frequency, changes, models they were never evaluated on)."""
-    from .schedule import due_skills
+    """Skills that need an evaluation now (frequency, changes, models they were never evaluated on).
+    Approved results still waiting in an open results PR are reported but not counted as due."""
+    from .schedule import due_skills, pending_results
     extra = [m.strip() for m in (args.models or "").split(",") if m.strip()]
-    items = due_skills(extra)
+    items = due_skills(extra, pending_results())
+    due = [i for i in items if i["due"]]
     if args.json:
         print(json.dumps(items, indent=2))
         return
     if args.names:
-        print(",".join(i["skill"] for i in (items[:args.limit] if args.limit else items)))
+        print(",".join(i["skill"] for i in (due[:args.limit] if args.limit else due)))
         return
     lines = [f"- **`{i['skill']}`** ({i['verdict'] or 'not approved'}, last approved {i['last_approved'] or 'never'}): "
-             + "; ".join(i["reasons"]) for i in items]
+             + "; ".join(i["reasons"]) for i in due]
+    waiting = [f"- `{i['skill']}`: " + "; ".join(i["reasons"]) for i in items if not i["due"]]
     print("\n".join(lines) if lines else "No skills are due.")
+    if waiting:
+        print("\n**Approved, waiting to be merged** (not re-run - merge the PR to record them on main):\n")
+        print("\n".join(waiting))
 
 
 def cmd_models_check(args, cfg):
