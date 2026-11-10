@@ -74,7 +74,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     outputs:
-      skills: ${{ steps.select.outputs.skills }}
+      skills: ${{ steps.ready.outputs.skills }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -99,6 +99,7 @@ jobs:
           fi
 
       - name: Release readiness check
+        id: ready
         if: steps.select.outputs.skills != ''
         run: |
           ARGS=""
@@ -106,24 +107,35 @@ jobs:
           for s in "${LIST[@]}"; do ARGS="$ARGS --skill $s"; done
           CHECK_ACTION=release; [ "$ACTION" != "release" ] && CHECK_ACTION=status
           set +e
-          python -m skilldist check $ARGS --action "$CHECK_ACTION" --summary check.md
+          python -m skilldist check $ARGS --action "$CHECK_ACTION" --summary check.md --ready-file ready.txt
           RC=$?
           set -e
           { echo "## Skill $ACTION - readiness"; echo; cat check.md; } >> "$GITHUB_STEP_SUMMARY"
-          if [ $RC -ne 0 ]; then
-            echo "::error::Release check failed - see the summary for what to fix."
-            exit 1
+          READY=$(cat ready.txt)
+          if [ "${{ github.event_name }}" = "push" ]; then
+            # Automatic run after a merge: release what is ready, report the rest without failing the run.
+            for s in "${LIST[@]}"; do
+              case ",$READY," in *",$s,"*) ;; *) echo "::warning title=Not released - $s::Release check failed - see the run summary. Fix it, then run Skill release for $s." ;; esac
+            done
+            echo "skills=$READY" >> "$GITHUB_OUTPUT"
+            [ -z "$READY" ] && echo "Nothing is ready to release." >> "$GITHUB_STEP_SUMMARY"
+          else
+            if [ $RC -ne 0 ]; then
+              echo "::error::Release check failed - see the summary for what to fix."
+              exit 1
+            fi
+            echo "skills=$READY" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Build packages
-        if: steps.select.outputs.skills != '' && env.ACTION == 'release'
+        if: steps.ready.outputs.skills != '' && env.ACTION == 'release'
         run: |
-          IFS=',' read -ra LIST <<< "${{ steps.select.outputs.skills }}"
+          IFS=',' read -ra LIST <<< "${{ steps.ready.outputs.skills }}"
           for s in "${LIST[@]}"; do python -m skilldist package --skill "$s" --out dist; done
           ls -la dist
 
       - uses: actions/upload-artifact@v4
-        if: steps.select.outputs.skills != '' && env.ACTION == 'release'
+        if: steps.ready.outputs.skills != '' && env.ACTION == 'release'
         with:
           name: skill-packages-${{ github.run_id }}
           path: |

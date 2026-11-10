@@ -33,6 +33,7 @@ def main():
     c = sub.add_parser("check"); c.add_argument("--skill", action="append"); c.add_argument("--pending", action="store_true")
     c.add_argument("--action", default="release"); c.add_argument("--json", action="store_true")
     c.add_argument("--summary", help="also write the markdown report here")
+    c.add_argument("--ready-file", help="write the comma-separated skills that passed here")
     sub.add_parser("pending")
     pk = sub.add_parser("package"); pk.add_argument("--skill", action="append", required=True); pk.add_argument("--out", default="dist")
     r = sub.add_parser("release"); r.add_argument("--skill", action="append", required=True)
@@ -53,6 +54,8 @@ def main():
         md = core.render_check(res) if res else "Nothing to release."
         if args.summary:
             Path(args.summary).write_text(md)
+        if args.ready_file:
+            Path(args.ready_file).write_text(",".join(r["skill"] for r in res if r["ok"]))
         print(json.dumps(res, indent=2, default=str) if args.json else md)
         sys.exit(0 if all(r["ok"] for r in res) else 1)
     if args.cmd == "pending":
