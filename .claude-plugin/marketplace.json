@@ -1,0 +1,8 @@
+{
+  "name": "skill-eval-sandbox",
+  "owner": {
+    "name": "AI Platform Team"
+  },
+  "description": "Approved Claude skills, evaluated and released through the skill evaluation pipeline.",
+  "plugins": []
+}

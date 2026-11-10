@@ -1,4 +1,8 @@
-# Skill evaluation automation
+# Skill evaluation and distribution
+
+> **Evaluation** (below) decides whether a skill is good and still useful. **Distribution** releases approved
+> skills to Claude Code, Claude.ai and the Claude API with a second, release approval - see
+> [docs/DISTRIBUTION.md](docs/DISTRIBUTION.md) and the live [CATALOG.md](CATALOG.md).
 
 Automated evaluation and benchmarking for Claude skills, built on the eval tooling that ships with
 Anthropic's **skill-creator** (Skills 2.0): the same `evals.json` format, grader agent, benchmark

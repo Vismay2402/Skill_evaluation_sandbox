@@ -1,0 +1,11 @@
+# Release manifest for skills/csv-data-profiler - edit, open a PR, and the release workflow takes it from there.
+version: 1.0.0              # bump (semver) to release a new version
+status: active              # active | deprecated | retired
+owner: Vismay2402           # GitHub user or team responsible for the skill
+category: Data & Analytics
+tags: [data,csv,quality]
+channels: [claude_code, claude_ai]   # subset of distribution.yaml channels
+audience: all               # all, or a list of Claude.ai groups (Enterprise group targeting), e.g. [finance, legal]
+replaced_by: null           # for deprecated skills: the skill users should switch to
+changelog:
+  1.0.0: First release.

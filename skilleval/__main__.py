@@ -295,32 +295,42 @@ WORKFLOW = REPO_ROOT / ".github" / "workflows" / "skill-eval.yml"
 BEGIN, END = "# BEGIN skill-options", "# END skill-options"
 
 
-def cmd_sync_workflow(args, cfg):
-    """Regenerate the skill dropdown in the Run workflow form from the folders under skills/."""
-    skills_dir, _, _ = _paths(cfg)
-    names = all_skills(skills_dir)
-    lines = WORKFLOW.read_text().splitlines(keepends=True)
+def _sync_text(path: Path, names: list[str]) -> str | None:
+    lines = path.read_text().splitlines(keepends=True)
     try:
         b = next(i for i, l in enumerate(lines) if l.strip().startswith(BEGIN))
         e = next(i for i, l in enumerate(lines) if l.strip().startswith(END))
     except StopIteration:
-        sys.exit(f"markers '{BEGIN}' / '{END}' not found in {WORKFLOW}")
+        return None
     indent = lines[b][: len(lines[b]) - len(lines[b].lstrip())]
-    new = lines[: b + 1] + [f"{indent}- {n}\n" for n in names] + lines[e:]
-    text = "".join(new)
-    # keep the default valid: first skill in the list
-    import re as _re
-    text = _re.sub(r"(\n\s*default: )\S+(\n\s*skills_other:)", lambda m: m.group(1) + (names[0] if names else "all")
+    text = "".join(lines[: b + 1] + [f"{indent}- {n}\n" for n in names] + lines[e:])
+    import re as _re   # keep the default valid where it points at a skill (skill-eval.yml)
+    return _re.sub(r"(\n\s*default: )\S+(\n\s*skills_other:)", lambda m: m.group(1) + (names[0] if names else "all")
                    + m.group(2), text, count=1)
+
+
+def cmd_sync_workflow(args, cfg):
+    """Regenerate the skill dropdowns (Skill evaluation, Skill release) from the folders under skills/."""
+    skills_dir, _, _ = _paths(cfg)
+    names = all_skills(skills_dir)
+    stale = []
+    for wf in sorted(WORKFLOW.parent.glob("*.yml")):
+        text = _sync_text(wf, names)
+        if text is None:
+            continue
+        if text != wf.read_text():
+            stale.append(wf)
+            if not args.check:
+                wf.write_text(text)
     if args.check:
-        if text != WORKFLOW.read_text():
-            print("The skill dropdown in .github/workflows/skill-eval.yml is out of date. Run:\n"
-                  "  python -m skilleval sync-workflow\nand commit the result.")
+        if stale:
+            print("The skill dropdown in " + ", ".join(str(w.relative_to(REPO_ROOT)) for w in stale)
+                  + " is out of date. Run:\n  python -m skilleval sync-workflow\nand commit the result.")
             sys.exit(1)
-        print(f"dropdown lists all {len(names)} skills")
+        print(f"dropdowns list all {len(names)} skills")
         return
-    WORKFLOW.write_text(text)
-    print(f"dropdown now lists {len(names)} skills: {', '.join(names)}")
+    print(f"dropdowns now list {len(names)} skills: {', '.join(names)}"
+          + (f" (updated {', '.join(w.name for w in stale)})" if stale else " (already up to date)"))
 
 
 def cmd_catalog(args, cfg):

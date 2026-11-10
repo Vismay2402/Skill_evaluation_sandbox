@@ -20,3 +20,5 @@ jobs:
         run: python -m skilleval verify --changed origin/${{ github.base_ref }}
       - name: Run workflow dropdown lists every skill
         run: python -m skilleval sync-workflow --check
+      - name: Release manifests are valid
+        run: python -m skilldist lint

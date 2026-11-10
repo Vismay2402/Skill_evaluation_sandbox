@@ -1,0 +1,11 @@
+{
+  "extraKnownMarketplaces": {
+    "skill-eval-sandbox": {
+      "source": {
+        "source": "github",
+        "repo": "Vismay2402/Skill_evaluation_sandbox"
+      }
+    }
+  },
+  "enabledPlugins": {}
+}

@@ -1,0 +1,45 @@
+# Skill distribution - how approved skills reach users.
+#
+#   skills/<name>/             the skill (evaluated by skilleval)
+#   distribution/<name>.yaml   its release manifest: version, owner, channels, status, changelog
+#   this file                  org-wide settings and release policy
+#
+# Release = evaluated + approved skill -> release check -> human release approval
+#           -> packaged zip (GitHub Release) -> channels below -> catalog + marketplace updated.
+
+marketplace:
+  # Claude Code plugin marketplace served from this repo (.claude-plugin/marketplace.json).
+  # Users: /plugin marketplace add <org>/<repo>, then /plugin install <skill>@<name>
+  name: skill-eval-sandbox          # change to e.g. victaulic-skills (lowercase, no spaces, not "claude-*")
+  owner: {name: "AI Platform Team"}
+  description: Approved Claude skills, evaluated and released through the skill evaluation pipeline.
+  remove_retired_from_users: false  # true = retiring a skill also uninstalls it from users' Claude Code
+  bundles: {}                       # optional: several skills as one plugin, e.g.
+  #  victaulic-core:
+  #    description: Everyday skills for every Victaulic user
+  #    skills: [meeting-minutes, pii-redactor]
+
+channels:
+  # Where a released skill goes. Each skill's manifest picks a subset (default: all enabled here).
+  claude_code: true    # plugin in this repo's marketplace (automatic on merge)
+  claude_ai: true      # zip for an Owner to upload: Organization settings > Plugins & skills (issue opened)
+  api: false           # upload to the Claude API Skills endpoint (needs SKILLS_API_KEY secret)
+
+policy:
+  require_approved_evaluation: true   # the exact skill content must have an approved evaluation
+  max_evaluation_age_days: 90         # evaluation must be this recent
+  require_gate_pass: true             # the approved evaluation passed the automated gate
+  block_verdicts: [HARMFUL]           # never release with these usefulness verdicts
+  warn_verdicts: [RETIRE CANDIDATE]   # release allowed, reviewer is warned
+  require_changelog: true             # distribution/<skill>.yaml needs a changelog entry for the version
+  max_package_mb: 25
+  forbidden_extensions: [.exe, .dll, .so, .dylib, .bat, .cmd, .msi, .jar, .pyc]
+  secret_patterns:                    # a match blocks the release
+    - 'sk-ant-[A-Za-z0-9_\-]{20,}'
+    - 'AKIA[0-9A-Z]{16}'
+    - '-----BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY-----'
+    - '(?i)(password|passwd|secret|api[_-]?key)\s*[:=]\s*["''][^"'']{8,}["'']'
+
+notify:
+  announce_emails: []        # emailed on every release / deprecation (needs SMTP_* secrets)
+  claude_ai_admins: [Vismay2402]   # GitHub users assigned the "upload to Claude.ai" issues
